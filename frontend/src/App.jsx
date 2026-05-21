@@ -15,6 +15,7 @@ const WeatherPage   = lazy(() => import('./features/weather/pages/WeatherPage'))
 const AQIPage       = lazy(() => import('./features/aqi/pages/AQIPage'))
 const LiveMapPage   = lazy(() => import('./features/map/pages/LiveMapPage'))
 const EmergencyPage = lazy(() => import('./features/emergency/pages/EmergencyPage'))
+const AdminPage     = lazy(() => import('./features/admin/pages/AdminPage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -148,8 +149,7 @@ const AppRouter = () => {
           <Route path="/admin" element={
             <AdminRoute>
               <PageWrapper>
-                <PlaceholderPage title="Admin Panel" icon="⚙️"
-                  sub="User management, alert broadcasting, analytics, and system monitoring — coming in Phase 6" />
+                <AdminPage />
               </PageWrapper>
             </AdminRoute>
           } />

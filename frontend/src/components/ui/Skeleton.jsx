@@ -44,4 +44,22 @@ export const SkeletonRow = ({ cols = 3 }) => (
   </div>
 )
 
+export const SkeletonTable = () => (
+  <div className="glass-card p-5 space-y-4">
+    <div className="flex justify-between items-center mb-4">
+      <Skeleton height={20} className="w-1/3" />
+      <Skeleton height={32} className="w-1/4" />
+    </div>
+    <div className="space-y-3">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex justify-between items-center py-2 border-b border-white/5">
+          <Skeleton height={14} className="w-1/4" />
+          <Skeleton height={14} className="w-1/6" />
+          <Skeleton height={14} className="w-1/6" />
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 export default Skeleton

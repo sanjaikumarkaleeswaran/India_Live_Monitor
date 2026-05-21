@@ -6,44 +6,43 @@ const ApiResponse = require('../utils/apiResponse')
  * Protects against brute force and scraping
  */
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: 1000, // 1 second
+  max: 100000, // virtually unlimited
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
     ApiResponse.error(res, {
-      message: 'Too many requests. Please try again after 15 minutes.',
+      message: 'Too many requests.',
       statusCode: 429,
     })
   },
 })
 
 /**
- * Strict auth limiter — 10 requests per hour per IP
- * Prevents brute-force login attacks
+ * Strict auth limiter — disabled for development
  */
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  windowMs: 1000, // 1 second
+  max: 100000, // virtually unlimited
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
     ApiResponse.error(res, {
-      message: 'Too many login attempts. Please try again after 1 hour.',
+      message: 'Too many login attempts.',
       statusCode: 429,
     })
   },
 })
 
 /**
- * SOS limiter — prevent SOS spam (5 per hour)
+ * SOS limiter — disabled for development
  */
 const sosLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
+  windowMs: 1000,
+  max: 100000,
   handler: (req, res) => {
     ApiResponse.error(res, {
-      message: 'SOS rate limit reached. Please contact emergency services directly.',
+      message: 'SOS rate limit reached.',
       statusCode: 429,
     })
   },

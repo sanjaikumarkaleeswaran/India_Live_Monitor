@@ -16,6 +16,9 @@ const AQIPage       = lazy(() => import('./features/aqi/pages/AQIPage'))
 const LiveMapPage   = lazy(() => import('./features/map/pages/LiveMapPage'))
 const EmergencyPage = lazy(() => import('./features/emergency/pages/EmergencyPage'))
 const AdminPage     = lazy(() => import('./features/admin/pages/AdminPage'))
+const SafetyPage    = lazy(() => import('./features/safety/pages/SafetyPage'))
+const ReportsPage   = lazy(() => import('./features/reports/pages/ReportsPage'))
+const ProfilePage   = lazy(() => import('./features/profile/pages/ProfilePage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -121,8 +124,7 @@ const AppRouter = () => {
           <Route path="/safety" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Safety Monitor" icon="🛡️"
-                  sub="Crime alerts, women safety routes, danger zone mapping — coming in Phase 5" />
+                <SafetyPage />
               </PageWrapper>
             </ProtectedRoute>
           } />
@@ -130,8 +132,7 @@ const AppRouter = () => {
           <Route path="/reports" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Citizen Reports" icon="📋"
-                  sub="Report local incidents, view community alerts, moderate crowd-sourced data — coming in Phase 6" />
+                <ReportsPage />
               </PageWrapper>
             </ProtectedRoute>
           } />
@@ -139,8 +140,7 @@ const AppRouter = () => {
           <Route path="/profile" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="My Profile" icon="👤"
-                  sub="Account settings, preferences, and notification management" />
+                <ProfilePage />
               </PageWrapper>
             </ProtectedRoute>
           } />

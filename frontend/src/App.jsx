@@ -14,6 +14,7 @@ const FuelPage      = lazy(() => import('./features/fuel/pages/FuelPage'))
 const WeatherPage   = lazy(() => import('./features/weather/pages/WeatherPage'))
 const AQIPage       = lazy(() => import('./features/aqi/pages/AQIPage'))
 const LiveMapPage   = lazy(() => import('./features/map/pages/LiveMapPage'))
+const EmergencyPage = lazy(() => import('./features/emergency/pages/EmergencyPage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -111,8 +112,7 @@ const AppRouter = () => {
           <Route path="/emergency" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Emergency Response" icon="🚨"
-                  sub="SOS button, nearby hospitals, police stations, and national helplines — coming in Phase 5" />
+                <EmergencyPage />
               </PageWrapper>
             </ProtectedRoute>
           } />

@@ -5,7 +5,7 @@ import { Provider, useDispatch, useSelector } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { store } from './store'
-import { fetchCurrentUser } from '../features/auth/store/authSlice'
+import { fetchCurrentUser, setInitialized } from '../features/auth/store/authSlice'
 
 function AuthInitializer({ children }) {
   const dispatch = useDispatch()
@@ -13,9 +13,12 @@ function AuthInitializer({ children }) {
   const isInitialized = useSelector((s) => s.auth.isInitialized)
 
   useEffect(() => {
-    // If we have an access token but auth is not yet initialized, verify the token
-    if (accessToken && !isInitialized) {
-      dispatch(fetchCurrentUser())
+    if (!isInitialized) {
+      if (accessToken) {
+        dispatch(fetchCurrentUser())
+      } else {
+        dispatch(setInitialized())
+      }
     }
   }, [accessToken, isInitialized, dispatch])
 

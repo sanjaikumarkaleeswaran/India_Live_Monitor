@@ -90,6 +90,9 @@ const authSlice = createSlice({
     updateUserLocally: (state, action) => {
       state.user = { ...state.user, ...action.payload }
     },
+    setInitialized: (state) => {
+      state.isInitialized = true
+    },
   },
   extraReducers: (builder) => {
     // Register
@@ -166,7 +169,7 @@ const authSlice = createSlice({
   },
 })
 
-export const { logout, setTokens, clearError, updateUserLocally } = authSlice.actions
+export const { logout, setTokens, clearError, updateUserLocally, setInitialized } = authSlice.actions
 
 // Selectors
 export const selectAuth = (state) => state.auth

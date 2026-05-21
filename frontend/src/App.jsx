@@ -11,6 +11,8 @@ const LoginPage     = lazy(() => import('./features/auth/pages/LoginPage'))
 const RegisterPage  = lazy(() => import('./features/auth/pages/RegisterPage'))
 const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPage'))
 const FuelPage      = lazy(() => import('./features/fuel/pages/FuelPage'))
+const WeatherPage   = lazy(() => import('./features/weather/pages/WeatherPage'))
+const AQIPage       = lazy(() => import('./features/aqi/pages/AQIPage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -93,8 +95,7 @@ const AppRouter = () => {
           <Route path="/weather" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Weather Monitor" icon="🌤️"
-                  sub="Real-time temperature, rain alerts, cyclone tracking, heatwave warnings — coming in Phase 3" />
+                <WeatherPage />
               </PageWrapper>
             </ProtectedRoute>
           } />
@@ -102,8 +103,7 @@ const AppRouter = () => {
           <Route path="/aqi" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Air Quality Monitor" icon="🌬️"
-                  sub="City-wise AQI, pollution alerts, health warnings — coming in Phase 3" />
+                <AQIPage />
               </PageWrapper>
             </ProtectedRoute>
           } />

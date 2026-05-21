@@ -1,0 +1,87 @@
+const express = require('express')
+const axios = require('axios')
+const { asyncWrapper } = require('../../middleware/errorHandler')
+const ApiResponse = require('../../utils/apiResponse')
+
+const router = express.Router()
+
+// Realistic mock AQI data for major Indian cities if API token is missing
+const MOCK_AQI_DATA = {
+  DELHI:     { aqi: 285, category: 'Poor',         pm25: 145, pm10: 220, o3: 15, no2: 38 },
+  MUMBAI:    { aqi: 142, category: 'Moderate',     pm25: 55,  pm10: 95,  o3: 22, no2: 18 },
+  CHENNAI:   { aqi: 68,  category: 'Satisfactory', pm25: 20,  pm10: 45,  o3: 28, no2: 12 },
+  KOLKATA:   { aqi: 198, category: 'Moderate',     pm25: 72,  pm10: 110, o3: 18, no2: 24 },
+  BENGALURU: { aqi: 84,  category: 'Satisfactory', pm25: 28,  pm10: 52,  o3: 31, no2: 14 },
+  HYDERABAD: { aqi: 115, category: 'Moderate',     pm25: 41,  pm10: 75,  o3: 20, no2: 22 },
+}
+
+/**
+ * GET /api/v1/aqi
+ * Get AQI for a city
+ * Query: city (default: Delhi)
+ */
+router.get('/', asyncWrapper(async (req, res) => {
+  const city = (req.query.city || 'Delhi').toUpperCase()
+  const token = process.env.AQICN_API_KEY
+
+  if (!token || token.startsWith('your_')) {
+    const mock = MOCK_AQI_DATA[city] || MOCK_AQI_DATA.DELHI
+    return ApiResponse.success(res, {
+      message: 'Fetched mock AQI data (API token missing/placeholder)',
+      data: {
+        city: city.charAt(0) + city.slice(1).toLowerCase(),
+        ...mock,
+        time: new Date(),
+        source: 'mock',
+      },
+    })
+  }
+
+  try {
+    const url = `https://api.waqi.info/feed/${city}/?token=${token}`
+    const response = await axios.get(url)
+    const result = response.data
+
+    if (result.status !== 'ok') {
+      throw new Error(result.data || 'AQICN API returned error status')
+    }
+
+    const { aqi, iaqi, time } = result.data
+    
+    // Categorize standard Indian AQI bands
+    let category = 'Good'
+    if (aqi > 50)  category = 'Satisfactory'
+    if (aqi > 100) category = 'Moderate'
+    if (aqi > 200) category = 'Poor'
+    if (aqi > 300) category = 'Very Poor'
+    if (aqi > 400) category = 'Severe'
+
+    return ApiResponse.success(res, {
+      message: 'AQI data fetched successfully',
+      data: {
+        city,
+        aqi,
+        category,
+        pm25: iaqi.pm25?.v || null,
+        pm10: iaqi.pm10?.v || null,
+        o3:   iaqi.o3?.v   || null,
+        no2:  iaqi.no2?.v  || null,
+        time: time.s,
+        source: 'aqicn',
+      },
+    })
+  } catch (error) {
+    const mock = MOCK_AQI_DATA[city] || MOCK_AQI_DATA.DELHI
+    return ApiResponse.success(res, {
+      message: 'AQI API error, returned fallback mock data',
+      data: {
+        city,
+        ...mock,
+        time: new Date(),
+        source: 'fallback',
+      },
+    })
+  }
+}))
+
+module.exports = router

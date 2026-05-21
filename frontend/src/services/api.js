@@ -1,6 +1,4 @@
 import axios from 'axios'
-import { store } from '../app/store'
-import { logout, setTokens } from '../features/auth/store/authSlice'
 import toast from 'react-hot-toast'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
@@ -16,7 +14,8 @@ const api = axios.create({
 // ── Request Interceptor ─────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = store.getState().auth.accessToken
+    // Read directly from localStorage to prevent circular import loop with store
+    const token = typeof window !== 'undefined' ? localStorage.getItem('silm_token') : null
     if (token) config.headers.Authorization = `Bearer ${token}`
     return config
   },
@@ -67,24 +66,42 @@ api.interceptors.response.use(
           { withCredentials: true },
         )
         const { accessToken } = response.data.data
+
+        // Save token in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('silm_token', accessToken)
+        }
+
+        // Dynamically import store to dispatch token update
+        const { store } = await import('../app/store')
+        const { setTokens } = await import('../features/auth/store/authSlice')
         store.dispatch(setTokens({ accessToken }))
+
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError, null)
-        store.dispatch(logout())
+
+        // Clear local token
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('silm_token')
+        }
+
+        // Dynamically import store to dispatch logout
+        try {
+          const { store } = await import('../app/store')
+          const { logout } = await import('../features/auth/store/authSlice')
+          store.dispatch(logout())
+        } catch (e) {
+          console.error('Failed to dispatch logout in interceptor:', e)
+        }
+
         toast.error('Session expired. Please login again.')
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
       }
-    }
-
-    // Handle other errors gracefully
-    const message = error.response?.data?.message || 'Something went wrong'
-    if (error.response?.status !== 401) {
-      // Let calling code handle the error message display
     }
 
     return Promise.reject(error)

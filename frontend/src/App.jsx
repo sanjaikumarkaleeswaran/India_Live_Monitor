@@ -13,6 +13,7 @@ const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPag
 const FuelPage      = lazy(() => import('./features/fuel/pages/FuelPage'))
 const WeatherPage   = lazy(() => import('./features/weather/pages/WeatherPage'))
 const AQIPage       = lazy(() => import('./features/aqi/pages/AQIPage'))
+const LiveMapPage   = lazy(() => import('./features/map/pages/LiveMapPage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -78,8 +79,7 @@ const AppRouter = () => {
           <Route path="/map" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="India Live Map" icon="🗺️"
-                  sub="Interactive GIS map with danger zones, hospitals, weather layers and live alerts — coming in Phase 4" />
+                <LiveMapPage />
               </PageWrapper>
             </ProtectedRoute>
           } />

@@ -10,6 +10,7 @@ import { SkeletonCard } from './components/ui/Skeleton'
 const LoginPage     = lazy(() => import('./features/auth/pages/LoginPage'))
 const RegisterPage  = lazy(() => import('./features/auth/pages/RegisterPage'))
 const DashboardPage = lazy(() => import('./features/dashboard/pages/DashboardPage'))
+const FuelPage      = lazy(() => import('./features/fuel/pages/FuelPage'))
 
 // Placeholder pages for Phase 2+ (to be built incrementally)
 const PlaceholderPage = ({ title, icon = '🚧', sub }) => (
@@ -84,8 +85,7 @@ const AppRouter = () => {
           <Route path="/fuel" element={
             <ProtectedRoute>
               <PageWrapper>
-                <PlaceholderPage title="Fuel Price Monitor" icon="⛽"
-                  sub="State-wise petrol & diesel prices, history charts, and AI fuel-saving recommendations — coming in Phase 2" />
+                <FuelPage />
               </PageWrapper>
             </ProtectedRoute>
           } />

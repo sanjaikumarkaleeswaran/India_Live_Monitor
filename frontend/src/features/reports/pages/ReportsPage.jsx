@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertCircle, ThumbsUp, Flag, MapPin, Eye, FileText, CheckCircle, Tag, Plus } from 'lucide-react'

@@ -1,3 +1,5 @@
+"use client"
+
 import { motion } from 'framer-motion'
 import { useSelector } from 'react-redux'
 import { useQuery } from '@tanstack/react-query'

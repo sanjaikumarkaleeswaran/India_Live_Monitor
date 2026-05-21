@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import {
   selectUser,
@@ -20,7 +20,7 @@ import {
  */
 export const useAuth = () => {
   const dispatch = useDispatch()
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const user = useSelector(selectUser)
   const isAuthenticated = useSelector(selectIsAuthenticated)
@@ -33,7 +33,7 @@ export const useAuth = () => {
     const result = await dispatch(loginUser(credentials))
     if (loginUser.fulfilled.match(result)) {
       toast.success(`Welcome back, ${result.payload.data?.user?.name?.split(' ')[0] || 'User'}!`)
-      navigate('/dashboard')
+      router.push('/dashboard')
       return { success: true }
     } else {
       toast.error(result.payload || 'Login failed')
@@ -45,7 +45,7 @@ export const useAuth = () => {
     const result = await dispatch(registerUser(formData))
     if (registerUser.fulfilled.match(result)) {
       toast.success('Account created successfully! Welcome to Smart India Monitor.')
-      navigate('/dashboard')
+      router.push('/dashboard')
       return { success: true }
     } else {
       toast.error(result.payload || 'Registration failed')
@@ -56,7 +56,7 @@ export const useAuth = () => {
   const logout = async () => {
     await dispatch(logoutUser())
     toast.success('Logged out successfully')
-    navigate('/login')
+    router.push('/login')
   }
 
   const clearAuthError = () => dispatch(clearError())

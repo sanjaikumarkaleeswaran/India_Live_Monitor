@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, MapPin, Eye, Compass, PhoneCall, AlertCircle, Sparkles, Navigation, AlertTriangle, Lightbulb } from 'lucide-react'

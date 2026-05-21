@@ -1,11 +1,18 @@
 import { createSlice } from '@reduxjs/toolkit'
 
+const getInitialTheme = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('silm_theme') || 'dark'
+  }
+  return 'dark'
+}
+
 const uiSlice = createSlice({
   name: 'ui',
   initialState: {
     sidebarCollapsed: false,
     sidebarMobileOpen: false,
-    theme: localStorage.getItem('silm_theme') || 'dark',
+    theme: getInitialTheme(),
   },
   reducers: {
     toggleSidebar: (state) => {
@@ -16,11 +23,15 @@ const uiSlice = createSlice({
     },
     toggleTheme: (state) => {
       state.theme = state.theme === 'dark' ? 'light' : 'dark'
-      localStorage.setItem('silm_theme', state.theme)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('silm_theme', state.theme)
+      }
     },
     setTheme: (state, action) => {
       state.theme = action.payload
-      localStorage.setItem('silm_theme', action.payload)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('silm_theme', action.payload)
+      }
     },
   },
 })

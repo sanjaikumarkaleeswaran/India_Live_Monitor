@@ -1,5 +1,8 @@
+"use client"
+
+import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useRouter, usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Menu, Sun, Moon, Bell, Search, MapPin } from 'lucide-react'
 import { setSidebarMobileOpen, toggleTheme } from '../../app/uiSlice'
@@ -23,18 +26,22 @@ const PAGE_TITLES = {
 
 const Navbar = () => {
   const dispatch = useDispatch()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const router = useRouter()
+  const pathname = usePathname()
   const theme = useSelector((s) => s.ui.theme)
   const user = useSelector(selectUser)
 
-  const pageInfo = PAGE_TITLES[location.pathname] || {
+  const pageInfo = PAGE_TITLES[pathname] || {
     title: 'Smart India Monitor',
     subtitle: "India's unified civic intelligence platform",
   }
 
-  // Apply theme to document
-  document.documentElement.setAttribute('data-theme', theme)
+  // Apply theme to document (SSR Safe inside useEffect)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+  }, [theme])
 
   return (
     <header className="navbar">
@@ -101,7 +108,7 @@ const Navbar = () => {
           className="flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold text-white overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate('/profile')}
+          onClick={() => router.push('/profile')}
           aria-label="User profile"
         >
           {user?.name?.charAt(0)?.toUpperCase() || 'U'}

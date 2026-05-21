@@ -1,16 +1,40 @@
-# React + Vite
+# India Live Monitor — Frontend (Next.js)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the Next.js frontend application for the **India Live Monitor** platform. It has been migrated from Vite.js to the modern Next.js 15 App Router architecture for improved performance, SEO capabilities, and scalability.
 
-Currently, two official plugins are available:
+## Technologies Used
+- **Framework**: Next.js 15 (App Router)
+- **State Management**: Redux Toolkit (auth, UI states)
+- **Data Fetching**: TanStack React Query (cached server sync)
+- **Styling**: Tailwind CSS v4 (configured via PostCSS)
+- **Icons**: Lucide React
+- **Maps**: Leaflet / React-Leaflet (loaded client-side dynamically to prevent SSR hydration errors)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Getting Started
 
-## React Compiler
+### Prerequisites
+Make sure you have Node.js installed (v18+ recommended).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Installation
+From the `frontend` directory, install all required dependencies:
+```bash
+npm install --legacy-peer-deps
+```
 
-## Expanding the ESLint configuration
+### Environment Variables
+Configure your environment variables in `.env`. Key variables:
+- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (defaults to `/api` proxy in development).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Run in Development
+Start the Next.js local dev server:
+```bash
+npm run dev
+```
+The application will run on [http://localhost:3000](http://localhost:3000).
+
+### Build for Production
+To build the application:
+```bash
+npm run build
+```
+This performs a production compile, optimizes static/dynamic pages, and validates all typescript/lint constraints.

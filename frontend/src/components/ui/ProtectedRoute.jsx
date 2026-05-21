@@ -1,19 +1,39 @@
-import { Navigate, useLocation } from 'react-router-dom'
+"use client"
+
+import { useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import { selectIsAuthenticated, selectIsAdmin } from '../../features/auth/store/authSlice'
-import { Skeleton } from '../ui/Skeleton'
+import { SkeletonCard } from './Skeleton'
+
+// Page-level loader skeleton
+export const PageLoader = () => (
+  <div className="p-6 space-y-4 min-h-[60vh] flex flex-col justify-center">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map(i => (
+        <SkeletonCard key={i} />
+      ))}
+    </div>
+  </div>
+)
 
 /**
  * ProtectedRoute — Guards routes behind authentication
  * Redirects to /login if not authenticated
- * Saves the intended URL for post-login redirect
  */
 export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated)
-  const location = useLocation()
+  const isInitialized = useSelector((s) => s.auth.isInitialized)
+  const router = useRouter()
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [isAuthenticated, isInitialized, router])
+
+  if (!isInitialized || !isAuthenticated) {
+    return <PageLoader />
   }
 
   return children
@@ -26,14 +46,21 @@ export const ProtectedRoute = ({ children }) => {
 export const AdminRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated)
   const isAdmin = useSelector(selectIsAdmin)
-  const location = useLocation()
+  const isInitialized = useSelector((s) => s.auth.isInitialized)
+  const router = useRouter()
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
-  }
+  useEffect(() => {
+    if (isInitialized) {
+      if (!isAuthenticated) {
+        router.replace('/login')
+      } else if (!isAdmin) {
+        router.replace('/dashboard')
+      }
+    }
+  }, [isAuthenticated, isAdmin, isInitialized, router])
 
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />
+  if (!isInitialized || !isAuthenticated || !isAdmin) {
+    return <PageLoader />
   }
 
   return children
@@ -44,9 +71,18 @@ export const AdminRoute = ({ children }) => {
  */
 export const PublicRoute = ({ children }) => {
   const isAuthenticated = useSelector(selectIsAuthenticated)
+  const isInitialized = useSelector((s) => s.auth.isInitialized)
+  const router = useRouter()
 
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      router.replace('/dashboard')
+    }
+  }, [isAuthenticated, isInitialized, router])
+
+  // If already authenticated or initializing, don't flash the public page
+  if (!isInitialized || isAuthenticated) {
+    return <PageLoader />
   }
 
   return children

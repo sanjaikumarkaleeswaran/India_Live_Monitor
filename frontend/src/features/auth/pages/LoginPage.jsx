@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Mail, Lock, Activity, ArrowRight } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -118,7 +120,7 @@ const LoginPage = () => {
                 <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
+                <Link href="/forgot-password" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
                   Forgot password?
                 </Link>
               </div>
@@ -173,7 +175,7 @@ const LoginPage = () => {
           {/* Register link */}
           <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
             Don't have an account?{' '}
-            <Link to="/register" className="font-semibold text-orange-400 hover:text-orange-300 transition-colors">
+            <Link href="/register" className="font-semibold text-orange-400 hover:text-orange-300 transition-colors">
               Create one free
             </Link>
           </p>

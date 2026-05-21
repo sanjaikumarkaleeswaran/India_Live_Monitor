@@ -1,4 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+"use client"
+
+import Link from 'next/link'
+import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -34,7 +37,8 @@ const adminLinks = [
 
 const Sidebar = () => {
   const dispatch = useDispatch()
-  const navigate = useNavigate()
+  const router = useRouter()
+  const pathname = usePathname()
   const { sidebarCollapsed, sidebarMobileOpen } = useSelector((s) => s.ui)
   const user = useSelector(selectUser)
   const isAdmin = useSelector(selectIsAdmin)
@@ -42,7 +46,7 @@ const Sidebar = () => {
   const handleLogout = async () => {
     await dispatch(logoutUser())
     toast.success('Logged out successfully')
-    navigate('/login')
+    router.push('/login')
   }
 
   const closeMobile = () => dispatch(setSidebarMobileOpen(false))
@@ -134,12 +138,13 @@ const Sidebar = () => {
           <ul className="space-y-1">
             {allLinks.map((link) => {
               const Icon = iconMap[link.icon]
+              const isActive = pathname === link.path
               return (
                 <li key={link.path}>
-                  <NavLink
-                    to={link.path}
+                  <Link
+                    href={link.path}
                     onClick={closeMobile}
-                    className={({ isActive }) => `
+                    className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
                       transition-all duration-150 group relative
                       ${isActive
@@ -150,21 +155,17 @@ const Sidebar = () => {
                     `}
                     title={sidebarCollapsed ? link.label : undefined}
                   >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <motion.div
-                            className="absolute left-0 top-1/2 w-0.5 h-5 -translate-y-1/2 rounded-full bg-orange-400"
-                            layoutId="activeIndicator"
-                          />
-                        )}
-                        {Icon && <Icon size={18} className="flex-shrink-0" />}
-                        {!sidebarCollapsed && (
-                          <span className="truncate">{link.label}</span>
-                        )}
-                      </>
+                    {isActive && (
+                      <motion.div
+                        className="absolute left-0 top-1/2 w-0.5 h-5 -translate-y-1/2 rounded-full bg-orange-400"
+                        layoutId="activeIndicator"
+                      />
                     )}
-                  </NavLink>
+                    {Icon && <Icon size={18} className="flex-shrink-0" />}
+                    {!sidebarCollapsed && (
+                      <span className="truncate">{link.label}</span>
+                    )}
+                  </Link>
                 </li>
               )
             })}
@@ -175,7 +176,7 @@ const Sidebar = () => {
         <div className="border-t p-3" style={{ borderColor: 'var(--border-subtle)' }}>
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer mb-2"
-              onClick={() => navigate('/profile')}>
+              onClick={() => router.push('/profile')}>
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}

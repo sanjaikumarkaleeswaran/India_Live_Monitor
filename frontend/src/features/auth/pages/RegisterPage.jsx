@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Mail, Lock, User, Phone, Activity, CheckCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -208,7 +210,7 @@ const RegisterPage = () => {
 
           <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-orange-400 hover:text-orange-300 transition-colors">
+            <Link href="/login" className="font-semibold text-orange-400 hover:text-orange-300 transition-colors">
               Sign in
             </Link>
           </p>

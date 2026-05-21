@@ -3,7 +3,7 @@ import { store } from '../app/store'
 import { logout, setTokens } from '../features/auth/store/authSlice'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
 
 // Create the main axios instance
 const api = axios.create({

@@ -1,3 +1,5 @@
+"use client"
+
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'

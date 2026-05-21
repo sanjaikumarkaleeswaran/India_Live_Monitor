@@ -48,10 +48,17 @@ export const fetchCurrentUser = createAsyncThunk(
 )
 
 // ── Initial State ──────────────────────────────────────────
+const getLocalStorageToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('silm_token')
+  }
+  return null
+}
+
 const initialState = {
   user: null,
-  accessToken: localStorage.getItem('silm_token') || null,
-  isAuthenticated: !!localStorage.getItem('silm_token'),
+  accessToken: getLocalStorageToken() || null,
+  isAuthenticated: !!getLocalStorageToken(),
   isLoading: false,
   error: null,
   isInitialized: false, // Has app attempted to fetch current user?
@@ -67,11 +74,15 @@ const authSlice = createSlice({
       state.accessToken = null
       state.isAuthenticated = false
       state.error = null
-      localStorage.removeItem('silm_token')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('silm_token')
+      }
     },
     setTokens: (state, action) => {
       state.accessToken = action.payload.accessToken
-      localStorage.setItem('silm_token', action.payload.accessToken)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('silm_token', action.payload.accessToken)
+      }
     },
     clearError: (state) => {
       state.error = null
@@ -92,7 +103,7 @@ const authSlice = createSlice({
         state.user = action.payload.data?.user || null
         state.accessToken = action.payload.data?.accessToken || null
         state.isAuthenticated = true
-        if (action.payload.data?.accessToken) {
+        if (action.payload.data?.accessToken && typeof window !== 'undefined') {
           localStorage.setItem('silm_token', action.payload.data.accessToken)
         }
       })
@@ -112,7 +123,7 @@ const authSlice = createSlice({
         state.user = action.payload.data?.user || null
         state.accessToken = action.payload.data?.accessToken || null
         state.isAuthenticated = true
-        if (action.payload.data?.accessToken) {
+        if (action.payload.data?.accessToken && typeof window !== 'undefined') {
           localStorage.setItem('silm_token', action.payload.data.accessToken)
         }
       })
@@ -126,7 +137,9 @@ const authSlice = createSlice({
       state.user = null
       state.accessToken = null
       state.isAuthenticated = false
-      localStorage.removeItem('silm_token')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('silm_token')
+      }
     })
 
     // Fetch current user (on app init)
@@ -146,7 +159,9 @@ const authSlice = createSlice({
         state.isAuthenticated = false
         state.accessToken = null
         state.isInitialized = true
-        localStorage.removeItem('silm_token')
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('silm_token')
+        }
       })
   },
 })

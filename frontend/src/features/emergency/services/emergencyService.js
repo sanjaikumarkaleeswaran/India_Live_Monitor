@@ -18,3 +18,13 @@ export const triggerSOS = async (sosData) => {
   const response = await api.post('/emergency/sos', sosData)
   return response.data.data
 }
+
+export const getSOSRequests = async () => {
+  const response = await api.get('/emergency/sos')
+  return response.data.data
+}
+
+export const updateSOSStatus = async ({ id, status }) => {
+  const response = await api.put(`/emergency/sos/${id}/status`, { status })
+  return response.data.data
+}

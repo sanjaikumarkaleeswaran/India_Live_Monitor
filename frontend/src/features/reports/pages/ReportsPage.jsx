@@ -1,29 +1,101 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, ThumbsUp, Flag, MapPin, Eye, FileText, CheckCircle, Tag, Plus } from 'lucide-react'
+import { AlertCircle, ThumbsUp, Flag, MapPin, Plus } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-
-const MOCK_REPORTS = [
-  { id: 1, title: 'Severe Waterlogging', category: 'Flooding', location: 'T-Nagar, Chennai', desc: 'Water has accumulated up to 2 feet near GN Chetty road intersection. Vehicles stranded.', verified: 8, flagged: 0, status: 'Active' },
-  { id: 2, title: 'Open Pothole Hazard', category: 'Road Damage', location: 'Indiranagar 100ft Rd, Bengaluru', desc: 'Huge pothole in middle lane near traffic signal. Dangerous for two-wheelers.', verified: 14, flagged: 1, status: 'Under Review' },
-  { id: 3, title: 'Street Light Failure', category: 'Utility', location: 'Dwarka Sector 6, Delhi', desc: 'Entire block dark for 3 consecutive nights. Increases risk of accidents.', verified: 5, flagged: 0, status: 'Active' }
-]
+import {
+  getReports,
+  createReport,
+  verifyReport,
+  flagReport
+} from '../services/reportService'
+import { useSocket } from '../../../hooks/useSocket'
+import { SkeletonCard } from '../../../components/ui/Skeleton'
 
 const ReportsPage = () => {
-  const [reports, setReports] = useState(MOCK_REPORTS)
+  const [reports, setReports] = useState([])
   const [form, setForm] = useState({ title: '', category: 'Road Damage', location: '', desc: '' })
   const [showSubmitModal, setShowSubmitModal] = useState(false)
 
+  // Fetch reports from backend
+  const { data: reportsResponse, isLoading } = useQuery({
+    queryKey: ['reportsList'],
+    queryFn: () => getReports()
+  })
+
+  // Sync react-query data to local state
+  useEffect(() => {
+    if (reportsResponse) {
+      setReports(reportsResponse)
+    }
+  }, [reportsResponse])
+
+  // Setup Socket.io real-time listeners
+  const socketEvents = useMemo(() => ({
+    'report:new': (newReport) => {
+      setReports(prev => {
+        if (prev.some(r => r.id === newReport.id)) return prev
+        return [newReport, ...prev]
+      })
+      toast.info(`New report filed: ${newReport.title}`, { icon: '📋' })
+    },
+    'report:update': (updatedReport) => {
+      setReports(prev => prev.map(r => r.id === updatedReport.id ? { ...r, ...updatedReport } : r))
+    },
+    'report:delete': ({ id }) => {
+      setReports(prev => prev.filter(r => r.id !== id))
+    }
+  }), [])
+
+  useSocket(socketEvents)
+
+  // Mutations
+  const verifyMutation = useMutation({
+    mutationFn: verifyReport,
+    onSuccess: (data) => {
+      setReports(prev => prev.map(r => r.id === data.report.id ? { ...r, ...data.report } : r))
+      toast.success(data.message)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to verify report. Please login first.')
+    }
+  })
+
+  const flagMutation = useMutation({
+    mutationFn: flagReport,
+    onSuccess: (data) => {
+      setReports(prev => prev.map(r => r.id === data.report.id ? { ...r, ...data.report } : r))
+      toast.success(data.message)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to flag report. Please login first.')
+    }
+  })
+
+  const submitMutation = useMutation({
+    mutationFn: createReport,
+    onSuccess: (data) => {
+      setReports(prev => {
+        if (prev.some(r => r.id === data.report.id)) return prev
+        return [data.report, ...prev]
+      })
+      setForm({ title: '', category: 'Road Damage', location: '', desc: '' })
+      setShowSubmitModal(false)
+      toast.success('Your civic report has been published!')
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to publish report')
+    }
+  })
+
   const handleVerify = (id) => {
-    setReports(prev => prev.map(r => r.id === id ? { ...r, verified: r.verified + 1 } : r))
-    toast.success('Report verification counted!')
+    verifyMutation.mutate(id)
   }
 
   const handleFlag = (id) => {
-    setReports(prev => prev.map(r => r.id === id ? { ...r, flagged: r.flagged + 1 } : r))
-    toast.success('Report flagged for moderation check')
+    flagMutation.mutate(id)
   }
 
   const handleSubmit = (e) => {
@@ -32,21 +104,12 @@ const ReportsPage = () => {
       return toast.error('Please fill in all fields')
     }
 
-    const newReport = {
-      id: Date.now(),
+    submitMutation.mutate({
       title: form.title,
       category: form.category,
-      location: form.location,
-      desc: form.desc,
-      verified: 1,
-      flagged: 0,
-      status: 'Active'
-    }
-
-    setReports([newReport, ...reports])
-    setForm({ title: '', category: 'Road Damage', location: '', desc: '' })
-    setShowSubmitModal(false)
-    toast.success('Your civic report has been submitted for moderation review!')
+      locationName: form.location,
+      desc: form.desc
+    })
   }
 
   return (
@@ -62,7 +125,7 @@ const ReportsPage = () => {
 
         <button
           onClick={() => setShowSubmitModal(true)}
-          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-bold rounded-xl text-sm flex items-center gap-1.5"
+          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-bold rounded-xl text-sm flex items-center gap-1.5 cursor-pointer"
         >
           <Plus size={16} />
           File Report
@@ -70,68 +133,84 @@ const ReportsPage = () => {
       </motion.div>
 
       {/* Reports Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="font-bold text-base text-white">Active Crowd Reports</h3>
-          <div className="space-y-3">
-            {reports.map((r) => (
-              <motion.div
-                key={r.id}
-                className="glass-card p-5 space-y-3 border"
-                style={{ borderColor: 'var(--border-subtle)' }}
-                layout
-              >
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">
-                      {r.category}
-                    </span>
-                    <h4 className="text-base font-bold text-white mt-1.5">{r.title}</h4>
-                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                      <MapPin size={12} className="text-emerald-400" />
-                      {r.location}
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
-                    {r.status}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed">{r.desc}</p>
-
-                {/* Vote buttons */}
-                <div className="flex items-center gap-4 pt-2 border-t border-white/5 text-xs text-slate-400">
-                  <button
-                    onClick={() => handleVerify(r.id)}
-                    className="flex items-center gap-1 hover:text-white transition-colors"
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-bold text-base text-white">Active Crowd Reports</h3>
+            {reports.length === 0 ? (
+              <div className="glass-card p-8 text-center text-slate-400">
+                No active reports filed. Be the first to file one!
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reports.map((r) => (
+                  <motion.div
+                    key={r.id}
+                    className="glass-card p-5 space-y-3 border"
+                    style={{ borderColor: 'var(--border-subtle)' }}
+                    layout
                   >
-                    <ThumbsUp size={14} className="text-emerald-400" />
-                    <span>Verify ({r.verified})</span>
-                  </button>
+                    <div className="flex justify-between items-start gap-4">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">
+                          {r.category}
+                        </span>
+                        <h4 className="text-base font-bold text-white mt-1.5">{r.title}</h4>
+                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
+                          <MapPin size={12} className="text-emerald-400" />
+                          {r.location}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                        {r.status}
+                      </span>
+                    </div>
 
-                  <button
-                    onClick={() => handleFlag(r.id)}
-                    className="flex items-center gap-1 hover:text-white transition-colors"
-                  >
-                    <Flag size={14} className="text-red-400" />
-                    <span>Flag ({r.flagged})</span>
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                    <p className="text-xs text-slate-300 leading-relaxed">{r.desc}</p>
+
+                    {/* Vote buttons */}
+                    <div className="flex items-center gap-4 pt-2 border-t border-white/5 text-xs text-slate-400">
+                      <button
+                        onClick={() => handleVerify(r.id)}
+                        disabled={verifyMutation.isPending}
+                        className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <ThumbsUp size={14} className="text-emerald-400" />
+                        <span>Verify ({r.verified})</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleFlag(r.id)}
+                        disabled={flagMutation.isPending}
+                        className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Flag size={14} className="text-red-400" />
+                        <span>Flag ({r.flagged})</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Informative Side Panel */}
+          <div className="space-y-4">
+            <div className="glass-card p-4 text-xs" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <h4 className="font-bold text-indigo-400 flex items-center gap-1.5"><AlertCircle size={14} /> Verification Protocol</h4>
+              <p className="mt-2 text-slate-300 leading-relaxed">
+                Crowd-sourced report pins automatically elevate to the GIS live map once they cross 10 verifications by registered citizens. False flags reduce verification scores.
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Informative Side Panel */}
-        <div className="space-y-4">
-          <div className="glass-card p-4 text-xs" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <h4 className="font-bold text-indigo-400 flex items-center gap-1.5"><AlertCircle size={14} /> Verification Protocol</h4>
-            <p className="mt-2 text-slate-300 leading-relaxed">
-              Crowd-sourced report pins automatically elevate to the GIS live map once they cross 10 verifications by registered citizens. False flags reduce verification scores.
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Submit Report Modal overlay */}
       <AnimatePresence>
@@ -145,7 +224,7 @@ const ReportsPage = () => {
             >
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-lg text-white">File Civic Incident Report</h3>
-                <button onClick={() => setShowSubmitModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                <button onClick={() => setShowSubmitModal(false)} className="text-slate-400 hover:text-white cursor-pointer">✕</button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -203,8 +282,12 @@ const ReportsPage = () => {
                   />
                 </div>
 
-                <button type="submit" className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-bold rounded-xl text-sm">
-                  Publish Report
+                <button
+                  type="submit"
+                  disabled={submitMutation.isPending}
+                  className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 transition-colors text-white font-bold rounded-xl text-sm cursor-pointer disabled:opacity-50"
+                >
+                  {submitMutation.isPending ? 'Publishing...' : 'Publish Report'}
                 </button>
               </form>
             </motion.div>

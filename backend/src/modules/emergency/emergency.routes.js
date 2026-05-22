@@ -1,6 +1,9 @@
 const express = require('express')
 const { asyncWrapper } = require('../../middleware/errorHandler')
+const { protect } = require('../../middleware/auth.middleware')
+const { moderatorOrAdmin } = require('../../middleware/rbac.middleware')
 const ApiResponse = require('../../utils/apiResponse')
+const SOS = require('../../models/SOS.model')
 
 const router = express.Router()
 
@@ -80,19 +83,110 @@ router.get('/police/nearby', asyncWrapper(async (req, res) => {
  * POST /api/v1/emergency/sos
  * Record an SOS signal with user location
  */
-router.post('/sos', asyncWrapper(async (req, res) => {
-  const { lat, lng, message, userId } = req.body
+router.post('/sos', protect, asyncWrapper(async (req, res) => {
+  const { lat, lng, message } = req.body
 
-  // TODO Phase 5: Store SOS in DB, broadcast via Socket.io, alert nearby responders
-  // For now: acknowledge and return emergency contacts
+  if (!lat || !lng) {
+    return ApiResponse.error(res, { message: 'Latitude and longitude coordinates are required for SOS', statusCode: 400 })
+  }
+
+  // Save SOS to MongoDB
+  const sos = await SOS.create({
+    user: req.user._id,
+    name: req.user.name,
+    phone: req.user.phone || '',
+    location: {
+      type: 'Point',
+      coordinates: [parseFloat(lng), parseFloat(lat)] // [longitude, latitude]
+    },
+    message: message || 'Critical citizen SOS alert triggered from Smart India Dashboard',
+    status: 'Pending'
+  })
+
+  // Format SOS details for the real-time websocket emit
+  const sosData = {
+    id: sos._id,
+    name: sos.name,
+    location: `${req.user.city || 'Unknown'} (${lat}, ${lng})`,
+    phone: sos.phone || 'N/A',
+    status: sos.status,
+    time: 'Just now',
+    createdAt: sos.createdAt
+  }
+
+  // Trigger Socket.io broadcast to administrators
+  if (req.app.get('io')) {
+    req.app.get('io').emit('emergency:sos', sosData)
+  }
+
   return ApiResponse.success(res, {
-    message: '🆘 SOS signal received. Emergency services have been notified. Call 112 immediately.',
+    message: '🆘 SOS signal received. Emergency services and control centers have been notified via live sockets. Call 112 immediately.',
     data: {
-      sosId: `SOS_${Date.now()}`,
-      receivedAt: new Date(),
+      sosId: sos._id,
+      receivedAt: sos.createdAt,
       location: { lat, lng },
       emergencyContacts: EMERGENCY_CONTACTS.slice(0, 4),
     },
+  })
+}))
+
+/**
+ * GET /api/v1/emergency/sos
+ * Get all active/pending SOS requests (moderator/admin only)
+ */
+router.get('/sos', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
+  const sosList = await SOS.find()
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean()
+
+  const formattedSos = sosList.map(s => ({
+    id: s._id,
+    name: s.name,
+    location: `(${s.location.coordinates[1]}, ${s.location.coordinates[0]})`,
+    phone: s.phone || 'N/A',
+    status: s.status,
+    time: s.createdAt,
+  }))
+
+  return ApiResponse.success(res, {
+    data: { sosRequests: formattedSos }
+  })
+}))
+
+/**
+ * PUT /api/v1/emergency/sos/:id/status
+ * Update SOS dispatch status (moderator/admin only)
+ */
+router.put('/sos/:id/status', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
+  const { status } = req.body
+  if (!['Pending', 'Dispatched', 'Resolved'].includes(status)) {
+    return ApiResponse.error(res, { message: 'Invalid status', statusCode: 400 })
+  }
+
+  const sos = await SOS.findByIdAndUpdate(
+    req.params.id,
+    { status },
+    { new: true }
+  )
+
+  if (!sos) {
+    return ApiResponse.error(res, { message: 'SOS request not found', statusCode: 404 })
+  }
+
+  const updatedSos = {
+    id: sos._id,
+    status: sos.status
+  }
+
+  // Broadcast the update to admin panel in real-time
+  if (req.app.get('io')) {
+    req.app.get('io').emit('emergency:sos_updated', updatedSos)
+  }
+
+  return ApiResponse.success(res, {
+    message: `SOS status updated to ${status}`,
+    data: { sos: updatedSos }
   })
 }))
 

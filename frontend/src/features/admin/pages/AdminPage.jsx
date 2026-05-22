@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -10,6 +10,8 @@ import {
 import toast from 'react-hot-toast'
 import { getUsers, updateUserRole } from '../services/adminService'
 import { createAlert } from '../../alerts/services/alertService'
+import { getSOSRequests, updateSOSStatus } from '../../emergency/services/emergencyService'
+import { useSocket } from '../../../hooks/useSocket'
 import { SkeletonCard, SkeletonTable } from '../../../components/ui/Skeleton'
 
 const AdminPage = () => {
@@ -85,20 +87,58 @@ const AdminPage = () => {
     createAlertMutation.mutate(formattedAlert)
   }
 
-  // Simulated active SOS requests
-  const [sosRequests, setSosRequests] = useState([
-    { id: 1, name: 'Sathyamoorthy K', location: 'Chennai (13.0818, 80.2748)', phone: '9840123456', status: 'Pending', time: '5m ago' },
-    { id: 2, name: 'Rahul Sharma', location: 'New Delhi (28.5672, 77.2100)', phone: '9811098765', status: 'Dispatched', time: '12m ago' }
-  ])
+  const [sosRequests, setSosRequests] = useState([])
+
+  // Query to fetch active SOS requests
+  const { data: sosResponse, isLoading: sosLoading } = useQuery({
+    queryKey: ['adminSOSList'],
+    queryFn: () => getSOSRequests(),
+    enabled: activeTab === 'sos'
+  })
+
+  // Sync SOS data
+  useEffect(() => {
+    if (sosResponse?.sosRequests) {
+      setSosRequests(sosResponse.sosRequests)
+    }
+  }, [sosResponse])
+
+  // Setup Socket.io real-time listeners for SOS alerts
+  const socketEvents = useMemo(() => ({
+    'emergency:sos': (newSOS) => {
+      setSosRequests(prev => {
+        if (prev.some(s => s.id === newSOS.id)) return prev
+        return [newSOS, ...prev]
+      })
+      toast.error(`🚨 EMERGENCY SOS received from ${newSOS.name}!`, {
+        duration: 10000,
+        icon: '🆘'
+      })
+    },
+    'emergency:sos_updated': (updatedSOS) => {
+      setSosRequests(prev => prev.map(s => s.id === updatedSOS.id ? { ...s, ...updatedSOS } : s))
+    }
+  }), [])
+
+  useSocket(socketEvents)
+
+  const sosStatusMutation = useMutation({
+    mutationFn: updateSOSStatus,
+    onSuccess: (data) => {
+      setSosRequests(prev => prev.map(s => s.id === data.sos.id ? { ...s, ...data.sos } : s))
+      toast.success(`SOS marked as ${data.sos.status}`)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to update SOS status')
+    }
+  })
 
   const resolveSOS = (id) => {
-    setSosRequests(prev => prev.map(s => s.id === id ? { ...s, status: 'Resolved' } : s))
-    toast.success('SOS status marked as Resolved')
+    sosStatusMutation.mutate({ id, status: 'Resolved' })
   }
 
   const dispatchResponders = (id) => {
-    setSosRequests(prev => prev.map(s => s.id === id ? { ...s, status: 'Dispatched' } : s))
-    toast.success('NDRF Rescue Team dispatched to coordinates')
+    sosStatusMutation.mutate({ id, status: 'Dispatched' })
   }
 
   const systemHealth = {
@@ -354,47 +394,60 @@ const AdminPage = () => {
             </h3>
 
             <div className="space-y-3">
-              {sosRequests.map((req) => (
-                <div key={req.id} className="p-4 rounded-xl flex justify-between items-start flex-wrap gap-4 border"
-                  style={{
-                    borderColor: req.status === 'Resolved' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                    background: req.status === 'Resolved' ? 'rgba(16,185,129,0.02)' : 'rgba(239,68,68,0.03)'
-                  }}>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-white">{req.name}</p>
-                      <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: req.status === 'Resolved' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                          color: req.status === 'Resolved' ? '#10b981' : '#ef4444'
-                        }}>
-                        {req.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400">Coords: {req.location}</p>
-                    <p className="text-xs text-slate-400">Phone: {req.phone} · {req.time}</p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {req.status !== 'Resolved' && (
-                      <>
-                        <button
-                          onClick={() => dispatchResponders(req.id)}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all"
-                        >
-                          Dispatch NDRF
-                        </button>
-                        <button
-                          onClick={() => resolveSOS(req.id)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all"
-                        >
-                          Mark Resolved
-                        </button>
-                      </>
-                    )}
-                  </div>
+              {sosLoading ? (
+                <div className="p-8 text-center text-slate-400 text-sm">
+                  Loading active SOS requests...
                 </div>
-              ))}
+              ) : sosRequests.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-sm">
+                  No active SOS requests at this time.
+                </div>
+              ) : (
+                sosRequests.map((req) => (
+                  <div key={req.id} className="p-4 rounded-xl flex justify-between items-start flex-wrap gap-4 border animate-pulse"
+                    style={{
+                      borderColor: req.status === 'Resolved' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                      background: req.status === 'Resolved' ? 'rgba(16,185,129,0.02)' : 'rgba(239,68,68,0.03)',
+                      animation: req.status === 'Pending' ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
+                    }}>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-sm text-white">{req.name}</p>
+                        <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: req.status === 'Resolved' ? 'rgba(16,185,129,0.2)' : req.status === 'Dispatched' ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)',
+                            color: req.status === 'Resolved' ? '#10b981' : req.status === 'Dispatched' ? '#3b82f6' : '#ef4444'
+                          }}>
+                          {req.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">Coords: {req.location}</p>
+                      <p className="text-xs text-slate-400">Phone: {req.phone} · {req.time ? new Date(req.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {req.status !== 'Resolved' && (
+                        <>
+                          {req.status === 'Pending' && (
+                            <button
+                              onClick={() => dispatchResponders(req.id)}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            >
+                              Dispatch NDRF
+                            </button>
+                          )}
+                          <button
+                            onClick={() => resolveSOS(req.id)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                          >
+                            Mark Resolved
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
         )}

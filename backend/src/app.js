@@ -13,6 +13,7 @@ const alertRoutes = require('./modules/alerts/alert.routes')
 const emergencyRoutes = require('./modules/emergency/emergency.routes')
 const weatherRoutes = require('./modules/weather/weather.routes')
 const aqiRoutes = require('./modules/aqi/aqi.routes')
+const reportRoutes = require('./modules/reports/reports.routes')
 const logger = require('./utils/logger')
 
 const app = express()
@@ -90,6 +91,7 @@ app.use('/api/v1/alerts',     alertRoutes)
 app.use('/api/v1/emergency',  emergencyRoutes)
 app.use('/api/v1/weather',    weatherRoutes)
 app.use('/api/v1/aqi',        aqiRoutes)
+app.use('/api/v1/reports',    reportRoutes)
 
 // ── 404 Handler ────────────────────────────────────────────
 app.use((req, res) => {

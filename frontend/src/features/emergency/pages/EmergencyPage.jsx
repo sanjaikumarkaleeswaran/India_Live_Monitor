@@ -79,12 +79,27 @@ const EmergencyPage = () => {
     if (sosCountdown === null) return
     if (sosCountdown === 0) {
       setSosCountdown(null)
-      // Trigger the API mutation
-      sosMutation.mutate({
-        lat: 28.5672,
-        lng: 77.2100,
-        message: 'Critical citizen SOS alert triggered from Smart India Dashboard'
-      })
+      
+      const triggerWithCoords = (lat, lng) => {
+        sosMutation.mutate({
+          lat,
+          lng,
+          message: 'Critical citizen SOS alert triggered from Smart India Dashboard'
+        })
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => triggerWithCoords(pos.coords.latitude, pos.coords.longitude),
+          (err) => {
+            console.warn('Geolocation failed or denied, using default:', err.message)
+            triggerWithCoords(28.5672, 77.2100)
+          },
+          { timeout: 5000 }
+        )
+      } else {
+        triggerWithCoords(28.5672, 77.2100)
+      }
       return
     }
 

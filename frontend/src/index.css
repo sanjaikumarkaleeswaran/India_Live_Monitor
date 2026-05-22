@@ -526,3 +526,27 @@ tr:hover td {
   background: var(--bg-base) !important;
   border-radius: 16px;
 }
+
+/* ── Hide Netlify Collaboration / Feedback Drawer & Identity Widgets ── */
+#netlify-drawer,
+.netlify-drawer,
+#netlify-cms-widget,
+.netlify-cms-widget,
+#netlify-identity-widget,
+[data-netlify-announcement],
+[data-netlify-identity] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ── Shimmer Slide Animation for Buttons ── */
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  50% { transform: translateX(100%) skewX(-15deg); }
+  100% { transform: translateX(100%) skewX(-15deg); }
+}
+.animate-shimmer-slide {
+  animation: shimmer-slide 2s infinite ease-in-out;
+}

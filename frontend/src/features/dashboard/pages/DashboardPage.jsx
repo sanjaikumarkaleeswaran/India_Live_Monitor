@@ -207,28 +207,41 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Emergency Helplines */}
-        <motion.div className="glass-card p-5"
+        <motion.div className="glass-card p-5 flex flex-col justify-between"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Phone size={18} className="text-emerald-400" />
-            <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Emergency Helplines</h3>
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Phone size={18} className="text-emerald-400" />
+              <h3 className="font-bold text-base text-white">Emergency Helplines</h3>
+            </div>
+            <div className="space-y-2">
+              {contactsData?.contacts?.slice(0, 6).map((num) => (
+                <a key={num.number} href={`tel:${num.number}`}
+                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 border border-[var(--border-subtle)] hover:border-orange-500/30 transition-all duration-200 group transform hover:translate-x-1"
+                >
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{num.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold transition-colors"
+                      style={{ color: num.color || '#3b82f6' }}>{num.number}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {contactsData?.contacts?.slice(0, 6).map((num) => (
-              <a key={num.number} href={`tel:${num.number}`}
-                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-all group"
-                style={{ border: '1px solid var(--border-subtle)' }}>
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{num.name}</span>
-                <span className="text-sm font-bold group-hover:text-orange-400 transition-colors"
-                  style={{ color: num.color || '#3b82f6' }}>{num.number}</span>
-              </a>
-            ))}
-          </div>
-          <div className="mt-3 p-3 rounded-xl text-center"
-            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <p className="text-xs font-bold text-red-400">National Emergency</p>
-            <p className="text-2xl font-black text-red-400">112</p>
-          </div>
+          <a href="tel:112" className="mt-4 block relative overflow-hidden group rounded-xl p-3 text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.15) 100%)', 
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)'
+            }}>
+            {/* Shimmer background animation */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer-slide" />
+            <p className="text-[10px] font-bold tracking-widest uppercase text-red-300 group-hover:text-red-200 transition-colors">National Emergency Response</p>
+            <div className="flex items-center justify-center gap-2 mt-0.5">
+              <Phone size={18} className="text-red-400 group-hover:animate-bounce" />
+              <p className="text-2xl font-black text-red-400 group-hover:text-red-300 transition-colors">112</p>
+            </div>
+          </a>
         </motion.div>
       </div>
 

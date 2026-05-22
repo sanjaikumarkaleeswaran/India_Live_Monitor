@@ -173,20 +173,20 @@ const Sidebar = () => {
         </nav>
 
         {/* ── User Profile + Logout ─────────── */}
-        <div className="border-t p-3" style={{ borderColor: 'var(--border-subtle)' }}>
+        <div className="border-t p-3 mt-auto bg-[var(--bg-surface)]" style={{ borderColor: 'var(--border-subtle)' }}>
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer mb-2"
               onClick={() => router.push('/profile')}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                <div className="text-sm font-semibold truncate text-white">
                   {user?.name || 'User'}
                 </div>
-                <div className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
-                  {user?.role?.toUpperCase() || 'USER'}
+                <div className="text-[10px] font-bold tracking-wider uppercase text-orange-400 truncate">
+                  {user?.role || 'USER'}
                 </div>
               </div>
             </div>
@@ -196,7 +196,7 @@ const Sidebar = () => {
             onClick={handleLogout}
             className={`
               w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-              text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150
+              text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150 cursor-pointer
               ${sidebarCollapsed ? 'justify-center' : ''}
             `}
             title={sidebarCollapsed ? 'Logout' : undefined}

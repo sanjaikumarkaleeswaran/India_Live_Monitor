@@ -11,6 +11,8 @@ import {
 import { getAlerts } from '../services/alertService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 import { formatTimeAgo } from '../../../utils/formatters'
+import { useSelector } from 'react-redux'
+import { selectUser } from '../../auth/store/authSlice'
 
 const CATEGORY_ICONS = {
   weather: CloudLightning,
@@ -39,6 +41,12 @@ const AlertsPage = () => {
   })
 
   const alerts = alertsResponse?.data || []
+  const user = useSelector(selectUser)
+  const userState = user?.state
+  
+  const displayedAlerts = userState 
+    ? alerts.filter(a => !a.affectedStates || a.affectedStates.length === 0 || a.affectedStates.includes(userState))
+    : alerts
 
   const stats = {
     critical: alerts.filter(a => a.severity === 'critical').length,
@@ -125,14 +133,14 @@ const AlertsPage = () => {
 
       {/* Alerts List */}
       <motion.div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        {alerts.length === 0 ? (
+        {displayedAlerts.length === 0 ? (
           <div className="glass-card flex flex-col items-center justify-center py-16 border-dashed">
             <CheckCircle2 size={32} className="text-emerald-500/50 mb-3" />
             <p className="text-sm font-medium text-slate-300">No active alerts found.</p>
             <p className="text-xs text-slate-500 mt-1">All systems and regions are currently reporting normal operations.</p>
           </div>
         ) : (
-          alerts.map((alert, idx) => {
+          displayedAlerts.map((alert, idx) => {
             const s = SEVERITY_COLORS[alert.severity] || SEVERITY_COLORS.medium
             const Icon = s.icon
             const CategoryIcon = CATEGORY_ICONS[alert.category] || Info

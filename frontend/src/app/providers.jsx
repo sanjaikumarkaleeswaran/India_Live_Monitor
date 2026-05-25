@@ -35,6 +35,7 @@ export default function Providers({ children }) {
             gcTime: 10 * 60 * 1000,          // 10 minutes
             retry: 2,
             refetchOnWindowFocus: false,
+            refetchInterval: 5 * 60 * 1000,  // Auto-refresh every 5 minutes
           },
         },
       })

@@ -9,6 +9,8 @@ import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
+import { useSelector } from 'react-redux'
+import { selectUser } from '../../auth/store/authSlice'
 
 // Fix Leaflet marker icon asset paths in Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -47,6 +49,10 @@ const severityColors = {
 const LiveMapPage = () => {
   const [filter, setFilter] = useState('all') // 'all', 'alerts', 'hospitals', 'police'
   const [mapInstance, setMapInstance] = useState(null)
+  const user = useSelector(selectUser)
+  
+  const defaultCenter = user?.location?.coordinates ? [user.location.coordinates[1], user.location.coordinates[0]] : INDIA_CENTER
+  const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
 
   // Fetch live alerts
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
@@ -83,7 +89,7 @@ const LiveMapPage = () => {
   // Recenter to India helper
   const handleRecenter = () => {
     if (mapInstance) {
-      mapInstance.setView(INDIA_CENTER, DEFAULT_ZOOM)
+      mapInstance.setView(defaultCenter, defaultZoom)
     }
   }
 
@@ -215,8 +221,8 @@ const LiveMapPage = () => {
         {/* Leaflet Map Canvas */}
         <div className="lg:col-span-3 h-[60vh] rounded-2xl overflow-hidden relative" style={{ border: '1px solid var(--border-subtle)' }}>
           <MapContainer
-            center={INDIA_CENTER}
-            zoom={DEFAULT_ZOOM}
+            center={defaultCenter}
+            zoom={defaultZoom}
             style={{ width: '100%', height: '100%', background: '#0e1626' }}
             ref={setMapInstance}
           >

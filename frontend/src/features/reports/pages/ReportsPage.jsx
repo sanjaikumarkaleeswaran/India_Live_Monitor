@@ -13,6 +13,8 @@ import {
 } from '../services/reportService'
 import { useSocket } from '../../../hooks/useSocket'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
+import { useSelector } from 'react-redux'
+import { selectUser } from '../../auth/store/authSlice'
 
 const ReportsPage = () => {
   const [reports, setReports] = useState([])
@@ -24,6 +26,13 @@ const ReportsPage = () => {
     queryKey: ['reportsList'],
     queryFn: () => getReports()
   })
+  
+  const user = useSelector(selectUser)
+  const userCity = user?.city
+  
+  const displayedReports = userCity 
+    ? reports.filter(r => r.location.toLowerCase().includes(userCity.toLowerCase()))
+    : reports
 
   // Sync react-query data to local state
   useEffect(() => {
@@ -143,13 +152,13 @@ const ReportsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
           <div className="lg:col-span-2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <h3 className="font-bold text-base text-white">Active Crowd Reports</h3>
-            {reports.length === 0 ? (
+            {displayedReports.length === 0 ? (
               <div className="glass-card p-8 text-center text-slate-400">
                 No active reports filed. Be the first to file one!
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {reports.map((r) => (
+                {displayedReports.map((r) => (
                   <motion.div
                     key={r.id}
                     className="glass-card p-5 border"

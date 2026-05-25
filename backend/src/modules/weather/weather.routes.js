@@ -7,12 +7,12 @@ const router = express.Router()
 
 // Realistic mock weather data for major Indian cities if API key is missing
 const MOCK_WEATHER_DATA = {
-  DELHI:     { temp: 39.5, feelsLike: 43.1, humidity: 41, windSpeed: 12.5, condition: 'Clear Sky', icon: '☀️' },
-  MUMBAI:    { temp: 31.2, feelsLike: 36.8, humidity: 78, windSpeed: 16.2, condition: 'Humid/Cloudy', icon: '⛅' },
-  CHENNAI:   { temp: 34.0, feelsLike: 40.5, humidity: 72, windSpeed: 18.0, condition: 'Partly Cloudy', icon: '⛅' },
-  KOLKATA:   { temp: 33.4, feelsLike: 39.0, humidity: 82, windSpeed: 14.5, condition: 'Scattered Clouds', icon: '☁️' },
-  BENGALURU: { temp: 27.8, feelsLike: 29.5, humidity: 55, windSpeed: 21.0, condition: 'Breezy/Pleasant', icon: '🍃' },
-  HYDERABAD: { temp: 33.2, feelsLike: 35.5, humidity: 49, windSpeed: 13.0, condition: 'Clear Sky', icon: '☀️' },
+  DELHI:     { temp: 46.2, feelsLike: 49.1, humidity: 32, windSpeed: 15.5, condition: 'Severe Heatwave', icon: '☀️' },
+  MUMBAI:    { temp: 35.8, feelsLike: 44.2, humidity: 82, windSpeed: 18.2, condition: 'Humid', icon: '⛅' },
+  CHENNAI:   { temp: 39.0, feelsLike: 45.5, humidity: 75, windSpeed: 20.0, condition: 'Hot & Humid', icon: '⛅' },
+  KOLKATA:   { temp: 38.4, feelsLike: 43.0, humidity: 85, windSpeed: 16.5, condition: 'Scattered Clouds', icon: '☁️' },
+  BENGALURU: { temp: 32.8, feelsLike: 34.5, humidity: 45, windSpeed: 22.0, condition: 'Partly Cloudy', icon: '⛅' },
+  HYDERABAD: { temp: 41.2, feelsLike: 43.5, humidity: 40, windSpeed: 14.0, condition: 'Clear Sky', icon: '☀️' },
 }
 
 /**

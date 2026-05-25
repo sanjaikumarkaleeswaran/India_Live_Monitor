@@ -7,12 +7,12 @@ const router = express.Router()
 
 // Realistic mock AQI data for major Indian cities if API token is missing
 const MOCK_AQI_DATA = {
-  DELHI:     { aqi: 285, category: 'Poor',         pm25: 145, pm10: 220, o3: 15, no2: 38 },
-  MUMBAI:    { aqi: 142, category: 'Moderate',     pm25: 55,  pm10: 95,  o3: 22, no2: 18 },
-  CHENNAI:   { aqi: 68,  category: 'Satisfactory', pm25: 20,  pm10: 45,  o3: 28, no2: 12 },
-  KOLKATA:   { aqi: 198, category: 'Moderate',     pm25: 72,  pm10: 110, o3: 18, no2: 24 },
-  BENGALURU: { aqi: 84,  category: 'Satisfactory', pm25: 28,  pm10: 52,  o3: 31, no2: 14 },
-  HYDERABAD: { aqi: 115, category: 'Moderate',     pm25: 41,  pm10: 75,  o3: 20, no2: 22 },
+  DELHI:     { aqi: 345, category: 'Very Poor',    pm25: 185, pm10: 270, o3: 35, no2: 48 },
+  MUMBAI:    { aqi: 178, category: 'Moderate',     pm25: 75,  pm10: 125, o3: 28, no2: 24 },
+  CHENNAI:   { aqi: 92,  category: 'Satisfactory', pm25: 35,  pm10: 55,  o3: 30, no2: 15 },
+  KOLKATA:   { aqi: 212, category: 'Poor',         pm25: 92,  pm10: 130, o3: 25, no2: 34 },
+  BENGALURU: { aqi: 114, category: 'Moderate',     pm25: 42,  pm10: 65,  o3: 35, no2: 18 },
+  HYDERABAD: { aqi: 145, category: 'Moderate',     pm25: 55,  pm10: 85,  o3: 28, no2: 26 },
 }
 
 /**

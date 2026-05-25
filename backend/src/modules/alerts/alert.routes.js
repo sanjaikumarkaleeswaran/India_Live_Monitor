@@ -18,7 +18,7 @@ const MOCK_ALERTS = [
   },
   {
     title: 'Heatwave Alert — Rajasthan & Haryana',
-    description: 'Maximum temperatures expected to remain 45–47°C for the next 3 days. Avoid outdoor exposure between 11am–4pm. Stay hydrated.',
+    description: 'Maximum temperatures expected to remain 46–48°C for the next 3 days. Avoid outdoor exposure between 11am–4pm. Stay hydrated.',
     type: 'Heatwave Alert', severity: 'high', category: 'weather',
     affectedStates: ['RJ', 'HR', 'UP'],
     source: 'official', isActive: true, isVerified: true,

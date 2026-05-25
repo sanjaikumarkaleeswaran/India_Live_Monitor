@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -13,6 +14,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
+import { selectUser } from '../../auth/store/authSlice'
 
 // Generates 7-day mock history data for the chart based on current price
 const generateHistoryData = (petrolPrice, dieselPrice) => {
@@ -31,7 +33,8 @@ const FuelPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState('stateName')
   const [sortOrder, setSortOrder] = useState('asc')
-  const [selectedState1, setSelectedState1] = useState('DL') // Default: Delhi
+  const user = useSelector(selectUser)
+  const [selectedState1, setSelectedState1] = useState(user?.state || 'DL') // Default: User state or Delhi
   const [selectedState2, setSelectedState2] = useState('MH') // Default: Maharashtra
 
   // Fetch live fuel prices from backend
@@ -63,6 +66,14 @@ const FuelPage = () => {
 
   const prices = data?.prices || []
   const summary = data?.summary || { avgPetrol: 0, avgDiesel: 0 }
+
+  const highestState = prices.reduce((max, current) => {
+    const maxPetrol = max?.petrol?.price || max?.petrol || 0
+    const currentPetrol = current?.petrol?.price || current?.petrol || 0
+    return currentPetrol > maxPetrol ? current : max
+  }, prices[0]) || { stateName: 'N/A', stateCode: 'N/A', petrol: 0, diesel: 0 }
+  const highestPetrol = highestState?.petrol?.price || highestState?.petrol || 0
+  const highestDiesel = highestState?.diesel?.price || highestState?.diesel || 0
 
   // ── Handle Sorting ──
   const handleSort = (field) => {
@@ -139,8 +150,8 @@ const FuelPage = () => {
 
         <motion.div className="glass-card flex flex-col justify-between" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">Highest Fuel State</span>
-          <h3 className="text-xl font-bold mt-2 text-slate-100">Rajasthan (RJ)</h3>
-          <p className="text-xs mt-1 text-red-400 truncate">Petrol: ₹108.97 · Diesel: ₹94.00</p>
+          <h3 className="text-xl font-bold mt-2 text-slate-100">{highestState.stateName} ({highestState.stateCode})</h3>
+          <p className="text-xs mt-1 text-red-400 truncate">Petrol: ₹{highestPetrol.toFixed(2)} · Diesel: ₹{highestDiesel.toFixed(2)}</p>
         </motion.div>
       </div>
 

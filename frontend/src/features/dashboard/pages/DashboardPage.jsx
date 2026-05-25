@@ -15,16 +15,9 @@ import { formatCurrency, getAQILevel, formatTimeAgo } from '../../../utils/forma
 import { getFuelPrices } from '../../fuel/services/fuelService'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts } from '../../emergency/services/emergencyService'
+import { getWeather } from '../../weather/services/weatherService'
+import { getAQI } from '../../aqi/services/aqiService'
 
-const MOCK_WEATHER = { city: 'Delhi', temp: 38, feelsLike: 41, humidity: 42, windSpeed: 14, condition: 'Clear Sky', icon: '☀️' }
-
-const MOCK_AQI = [
-  { city: 'Delhi',     aqi: 287 },
-  { city: 'Mumbai',    aqi: 142 },
-  { city: 'Chennai',   aqi: 68  },
-  { city: 'Kolkata',   aqi: 198 },
-  { city: 'Bengaluru', aqi: 84  },
-]
 
 // ── Stat Card (SILM) ─────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, sub, color, trend, delay = 0 }) => (
@@ -94,12 +87,26 @@ const DashboardPage = () => {
   const { data: fuelData, isLoading: fuelLoading } = useQuery({ queryKey: ['fuelPrices'], queryFn: getFuelPrices })
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({ queryKey: ['alerts'], queryFn: () => getAlerts({ limit: 4 }) })
   const { data: contactsData, isLoading: contactsLoading } = useQuery({ queryKey: ['emergencyContacts'], queryFn: () => getEmergencyContacts() })
+  
+  const defaultCity = user?.city || 'Delhi'
+  const { data: weatherData, isLoading: weatherLoading } = useQuery({ queryKey: ['weather', defaultCity], queryFn: () => getWeather(defaultCity) })
+  
+  const fetchDashboardAqi = async () => {
+    const cities = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']
+    const results = await Promise.all(cities.map(c => getAQI(c)))
+    return results
+  }
+  const { data: aqiList, isLoading: aqiLoading } = useQuery({ queryKey: ['dashboardAqi'], queryFn: fetchDashboardAqi })
 
   const alerts = alertsResponse?.data || []
   const fuelList = fuelData?.prices?.slice(0, 5) || []
   const avgPetrol = fuelData?.summary?.avgPetrol || 101.50
-  const avgAQI = Math.round(MOCK_AQI.reduce((s, a) => s + a.aqi, 0) / MOCK_AQI.length)
-  const aqiLevel = getAQILevel(avgAQI)
+  
+  const currentTemp = weatherData?.temp ?? '--'
+  const currentFeelsLike = weatherData?.feelsLike ?? '--'
+  const currentAQIList = aqiList || []
+  const avgAQI = currentAQIList.length > 0 ? Math.round(currentAQIList.reduce((s, a) => s + (a.aqi || 0), 0) / currentAQIList.length) : '--'
+  const aqiLevel = getAQILevel(avgAQI !== '--' ? avgAQI : 0)
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -108,7 +115,7 @@ const DashboardPage = () => {
     return 'Good evening'
   }
 
-  if (fuelLoading || alertsLoading || contactsLoading) {
+  if (fuelLoading || alertsLoading || contactsLoading || weatherLoading || aqiLoading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -143,7 +150,7 @@ const DashboardPage = () => {
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
         <StatCard icon={Fuel} label="Avg. Petrol Price" value={`₹${avgPetrol.toFixed(2)}`} sub="National average today" color="#FFB830" trend={0.00} delay={0.05} />
-        <StatCard icon={Thermometer} label="Delhi Temperature" value={`${MOCK_WEATHER.temp}°C`} sub={`Feels like ${MOCK_WEATHER.feelsLike}°C`} color="#7B61FF" delay={0.1} />
+        <StatCard icon={Thermometer} label={`${defaultCity} Temperature`} value={`${currentTemp}°C`} sub={`Feels like ${currentFeelsLike}°C`} color="#7B61FF" delay={0.1} />
         <StatCard icon={Wind} label="Avg. National AQI" value={avgAQI} sub={aqiLevel.label} color="#00E5FF" delay={0.15} />
         <StatCard icon={Siren} label="Active Alerts" value={alerts.length} sub={`${alerts.filter(a => a.severity === 'critical').length} critical`} color="#FF3D5A" delay={0.2} />
       </div>
@@ -235,7 +242,7 @@ const DashboardPage = () => {
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD' }}>City AQI Monitor</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-            {MOCK_AQI.map(a => {
+            {currentAQIList.map(a => {
               const lvl = getAQILevel(a.aqi)
               const pct = Math.min((a.aqi / 500) * 100, 100)
               return (

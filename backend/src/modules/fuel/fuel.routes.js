@@ -7,7 +7,7 @@ const router = express.Router()
 
 // Seeded fuel data for all 28 states + 3 UTs (as of May 2026 approximate values)
 const SEED_FUEL_DATA = [
-  { stateCode: 'AP', stateName: 'Andhra Pradesh',     petrol: 107.65, diesel: 94.62 },
+  { stateCode: 'AP', stateName: 'Andhra Pradesh',     petrol: 117.09, diesel: 101.97 },
   { stateCode: 'AR', stateName: 'Arunachal Pradesh',  petrol: 90.68,  diesel: 80.48 },
   { stateCode: 'AS', stateName: 'Assam',              petrol: 94.63,  diesel: 81.63 },
   { stateCode: 'BR', stateName: 'Bihar',              petrol: 104.67, diesel: 91.17 },
@@ -29,8 +29,8 @@ const SEED_FUEL_DATA = [
   { stateCode: 'PB', stateName: 'Punjab',             petrol: 96.72,  diesel: 85.72 },
   { stateCode: 'RJ', stateName: 'Rajasthan',          petrol: 108.97, diesel: 94.00 },
   { stateCode: 'SK', stateName: 'Sikkim',             petrol: 99.69,  diesel: 83.17 },
-  { stateCode: 'TN', stateName: 'Tamil Nadu',         petrol: 100.75, diesel: 92.46 },
-  { stateCode: 'TS', stateName: 'Telangana',          petrol: 107.54, diesel: 95.65 },
+  { stateCode: 'TN', stateName: 'Tamil Nadu',         petrol: 107.77, diesel: 92.76 },
+  { stateCode: 'TS', stateName: 'Telangana',          petrol: 117.15, diesel: 102.42 },
   { stateCode: 'TR', stateName: 'Tripura',            petrol: 97.80,  diesel: 85.72 },
   { stateCode: 'UP', stateName: 'Uttar Pradesh',      petrol: 94.75,  diesel: 87.82 },
   { stateCode: 'UK', stateName: 'Uttarakhand',        petrol: 94.87,  diesel: 88.55 },

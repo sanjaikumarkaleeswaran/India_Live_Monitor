@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, MapPin, Eye, Compass, PhoneCall, AlertCircle, Sparkles, Navigation, AlertTriangle, Lightbulb } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { selectUser } from '../../auth/store/authSlice'
 
 const SAFETY_STATS = {
   Delhi: { overall: 68, lighting: 'Moderate (64%)', police: 'Active', womenRating: 'Needs Improvement', activeAlerts: 2 },
@@ -15,7 +17,8 @@ const SAFETY_STATS = {
 }
 
 const SafetyPage = () => {
-  const [selectedCity, setSelectedCity] = useState('Delhi')
+  const user = useSelector(selectUser)
+  const [selectedCity, setSelectedCity] = useState(user?.city || 'Delhi')
   const [routeQuery, setRouteQuery] = useState({ from: '', to: '' })
   const [routeSafetyResult, setRouteSafetyResult] = useState(null)
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -9,11 +10,13 @@ import {
 } from 'lucide-react'
 import { getWeather } from '../services/weatherService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
+import { selectUser } from '../../auth/store/authSlice'
 
 const CITIES = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad']
 
 const WeatherPage = () => {
-  const [selectedCity, setSelectedCity] = useState('Delhi')
+  const user = useSelector(selectUser)
+  const [selectedCity, setSelectedCity] = useState(user?.city || 'Delhi')
 
   // Fetch weather data for selected city
   const { data: weather, isLoading, error } = useQuery({

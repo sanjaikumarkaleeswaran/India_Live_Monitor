@@ -1,17 +1,20 @@
 "use client"
 
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { Wind, Search, AlertCircle, Heart, MapPin, Eye } from 'lucide-react'
 import { getAQI } from '../services/aqiService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 import { getAQILevel } from '../../../utils/formatters'
+import { selectUser } from '../../auth/store/authSlice'
 
 const CITIES = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad']
 
 const AQIPage = () => {
-  const [selectedCity, setSelectedCity] = useState('Delhi')
+  const user = useSelector(selectUser)
+  const [selectedCity, setSelectedCity] = useState(user?.city || 'Delhi')
 
   // Fetch AQI data
   const { data: aqiData, isLoading, error } = useQuery({

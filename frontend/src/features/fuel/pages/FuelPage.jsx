@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -34,7 +34,7 @@ const FuelPage = () => {
   const [sortField, setSortField] = useState('stateName')
   const [sortOrder, setSortOrder] = useState('asc')
   const user = useSelector(selectUser)
-  const [selectedState1, setSelectedState1] = useState(user?.state || 'DL') // Default: User state or Delhi
+  const [selectedState1, setSelectedState1] = useState('DL') 
   const [selectedState2, setSelectedState2] = useState('MH') // Default: Maharashtra
 
   // Fetch live fuel prices from backend
@@ -42,6 +42,19 @@ const FuelPage = () => {
     queryKey: ['fuelPrices'],
     queryFn: getFuelPrices,
   })
+
+  // Initialize selectedState1 based on user's state name
+  useEffect(() => {
+    if (data?.prices && data.prices.length > 0) {
+      if (user?.state) {
+        const match = data.prices.find(p => 
+          p.stateName.toLowerCase() === user.state.toLowerCase() || 
+          p.stateCode.toLowerCase() === user.state.toLowerCase()
+        )
+        if (match) setSelectedState1(match.stateCode)
+      }
+    }
+  }, [data, user?.state])
 
   if (isLoading) {
     return (

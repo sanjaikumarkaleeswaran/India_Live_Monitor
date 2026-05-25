@@ -11,12 +11,18 @@ import {
 import { getWeather } from '../services/weatherService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 import { selectUser } from '../../auth/store/authSlice'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
-const CITIES = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad']
+const DEFAULT_CITIES = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad']
 
 const WeatherPage = () => {
   const user = useSelector(selectUser)
-  const [selectedCity, setSelectedCity] = useState(user?.city || 'Delhi')
+  const userCity = user?.city
+  const [selectedCity, setSelectedCity] = useState(userCity || 'Delhi')
+
+  const citiesList = userCity && !DEFAULT_CITIES.includes(userCity) 
+    ? [userCity, ...DEFAULT_CITIES] 
+    : DEFAULT_CITIES
 
   // Fetch weather data for selected city
   const { data: weather, isLoading, error } = useQuery({
@@ -78,8 +84,8 @@ const WeatherPage = () => {
         </div>
 
         {/* City Selector */}
-        <div className="flex gap-2">
-          {CITIES.map((city) => (
+        <div className="flex flex-wrap gap-2">
+          {citiesList.map((city) => (
             <button
               key={city}
               onClick={() => setSelectedCity(city)}
@@ -174,20 +180,48 @@ const WeatherPage = () => {
         </div>
       </div>
 
-      {/* 3-Day Forecast Section */}
+      {/* Forecast Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
+        
+        {/* Hourly Trend Chart */}
         <motion.div className="glass-card flex flex-col lg:col-span-2"
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <h3 className="font-semibold text-sm text-slate-100 mb-4">3-Day Regional Forecast</h3>
-          <div className="divide-y divide-white/5 flex-1 flex flex-col">
+          <h3 className="font-semibold text-sm text-slate-100 mb-4">Today's Temperature Trend</h3>
+          <div className="h-48 mt-2 flex-1">
+            {weather.hourlyForecast && weather.hourlyForecast.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weather.hourlyForecast} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="time" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} hide />
+                  <Tooltip contentStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }} />
+                  <Area type="monotone" dataKey="temp" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorTemp)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex-1 h-full flex items-center justify-center p-4 border border-dashed border-white/10 rounded-lg">
+                <p className="text-sm text-slate-500">Hourly data temporarily unavailable.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* 7-Day Forecast */}
+        <motion.div className="glass-card flex flex-col"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <h3 className="font-semibold text-sm text-slate-100 mb-4">7-Day Forecast</h3>
+          <div className="divide-y divide-white/5 flex-1 flex flex-col overflow-y-auto pr-2 custom-scrollbar">
             {weather.forecast && weather.forecast.length > 0 ? (
               weather.forecast.map((fc, index) => (
-                <div key={index} className="flex items-center justify-between py-3">
-                  <span className="font-medium text-sm text-slate-300">{fc.day}</span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-slate-500">{fc.condition}</span>
-                    <span className="font-bold text-sm text-slate-200">{fc.temp}°C</span>
-                  </div>
+                <div key={index} className="flex items-center justify-between py-2.5">
+                  <span className="font-medium text-sm text-slate-300 w-10">{fc.day}</span>
+                  <span className="text-xs text-slate-500 flex-1 truncate px-2 text-center">{fc.condition}</span>
+                  <span className="font-bold text-sm text-slate-200">{fc.temp}°C</span>
                 </div>
               ))
             ) : (
@@ -197,10 +231,12 @@ const WeatherPage = () => {
             )}
           </div>
         </motion.div>
+      </div>
 
-        {/* AI Health Advisory */}
+      {/* AI Health Advisory */}
+      <div className="grid grid-cols-1" style={{ gap: 24 }}>
         <motion.div className="glass-card flex flex-col justify-between"
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <div>
             <h3 className="font-semibold text-sm text-slate-100 mb-3 flex items-center gap-1.5"><Shield size={14} className="text-indigo-400" /> Advisory</h3>
             <p className="text-xs text-slate-400 leading-relaxed">

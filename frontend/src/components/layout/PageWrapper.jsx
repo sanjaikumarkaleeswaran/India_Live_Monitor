@@ -6,25 +6,27 @@ import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 
 /**
- * PageWrapper — The main authenticated layout shell
- * Wraps all protected pages with Sidebar + Navbar + content area
+ * PageWrapper — SILM Command Center Layout Shell
  */
 const PageWrapper = ({ children }) => {
   const { sidebarCollapsed } = useSelector((s) => s.ui)
 
   return (
-    <div className="layout-root bg-mesh">
+    <div className="layout-root" style={{ background: 'var(--bg-base)' }}>
+      {/* Atmospheric scan line */}
+      <div className="scan-line" />
+
       <Sidebar />
 
-      {/* Main content area */}
+      {/* Main content */}
       <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <Navbar />
 
         <motion.main
-          className="p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-64px)]"
-          initial={{ opacity: 0, y: 12 }}
+          style={{ padding: '24px 28px', minHeight: 'calc(100vh - 64px)' }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           {children}
         </motion.main>

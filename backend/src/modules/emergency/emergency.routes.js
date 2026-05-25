@@ -4,6 +4,39 @@ const { protect } = require('../../middleware/auth.middleware')
 const { moderatorOrAdmin } = require('../../middleware/rbac.middleware')
 const ApiResponse = require('../../utils/apiResponse')
 const SOS = require('../../models/SOS.model')
+const Hospital = require('../../models/Hospital.model')
+const PoliceStation = require('../../models/PoliceStation.model')
+
+// Helper function to seed initial emergency centers if DB is empty
+const seedEmergencyData = async () => {
+  const hospitalCount = await Hospital.countDocuments()
+  if (hospitalCount === 0) {
+    const SEED_HOSPITALS = [
+      { name: 'AIIMS New Delhi',           type: 'Government', phone: '011-26588500', beds: { total: 2400, available: 127 }, location: { type: 'Point', coordinates: [77.2100, 28.5672] } },
+      { name: 'Apollo Hospital',           type: 'Private',    phone: '1860-500-1066', beds: { total: 800,  available: 45  }, location: { type: 'Point', coordinates: [77.2882, 28.5367] } },
+      { name: 'Safdarjung Hospital',       type: 'Government', phone: '011-26707444', beds: { total: 1800, available: 89  }, location: { type: 'Point', coordinates: [77.2079, 28.5679] } },
+      { name: 'Max Super Specialty',       type: 'Private',    phone: '011-26515050', beds: { total: 600,  available: 22  }, location: { type: 'Point', coordinates: [77.2201, 28.5283] } },
+      { name: 'Ram Manohar Lohia Hospital',type: 'Government', phone: '011-23404482', beds: { total: 1500, available: 64  }, location: { type: 'Point', coordinates: [77.2016, 28.6253] } },
+      { name: 'Mumbai General Hospital',   type: 'Government', phone: '022-22621415', beds: { total: 1000, available: 110 }, location: { type: 'Point', coordinates: [72.8348, 18.9401] } },
+      { name: 'Chennai Rajiv Gandhi Govt Hospital', type: 'Government', phone: '044-25305000', beds: { total: 1200, available: 75 }, location: { type: 'Point', coordinates: [80.2748, 13.0818] } },
+      { name: 'Kolkata Medical College',   type: 'Government', phone: '033-22414901', beds: { total: 1100, available: 95 }, location: { type: 'Point', coordinates: [88.3639, 22.5726] } },
+      { name: 'Bengaluru Victoria Hospital', type: 'Government', phone: '080-26701150', beds: { total: 950, available: 50 }, location: { type: 'Point', coordinates: [77.5739, 12.9632] } }
+    ]
+    await Hospital.insertMany(SEED_HOSPITALS)
+  }
+
+  const policeCount = await PoliceStation.countDocuments()
+  if (policeCount === 0) {
+    const SEED_POLICE_STATIONS = [
+      { name: 'Connaught Place Police Station', phone: '011-23741350', location: { type: 'Point', coordinates: [77.2183, 28.6304] } },
+      { name: 'Parliament Street Police Station', phone: '011-23741356', location: { type: 'Point', coordinates: [77.2120, 28.6240] } },
+      { name: 'Janpath Police Station',           phone: '011-23741360', location: { type: 'Point', coordinates: [77.2180, 28.6200] } },
+      { name: 'Delhi Police HQ',                  phone: '100',          location: { type: 'Point', coordinates: [77.2185, 28.6295] } },
+      { name: 'Mumbai Police HQ',                 phone: '100',          location: { type: 'Point', coordinates: [72.8361, 18.9324] } }
+    ]
+    await PoliceStation.insertMany(SEED_POLICE_STATIONS)
+  }
+}
 
 const router = express.Router()
 
@@ -44,20 +77,41 @@ router.get('/contacts', asyncWrapper(async (req, res) => {
  * Query: lat, lng, radius (km, default 10)
  */
 router.get('/hospitals/nearby', asyncWrapper(async (req, res) => {
-  const { lat, lng, radius = 10 } = req.query
+  const lat = parseFloat(req.query.lat) || 28.5672
+  const lng = parseFloat(req.query.lng) || 77.2100
+  const radius = parseFloat(req.query.radius) || 10
 
-  // Mock nearby hospitals (replace with MongoDB $near query + real data in Phase 5)
-  const hospitals = [
-    { name: 'AIIMS New Delhi',           type: 'Government', phone: '011-26588500', distance: 2.3, beds: { total: 2400, available: 127 } },
-    { name: 'Apollo Hospital',           type: 'Private',    phone: '1860-500-1066', distance: 3.8, beds: { total: 800,  available: 45  } },
-    { name: 'Safdarjung Hospital',       type: 'Government', phone: '011-26707444', distance: 4.1, beds: { total: 1800, available: 89  } },
-    { name: 'Max Super Specialty',       type: 'Private',    phone: '011-26515050', distance: 5.2, beds: { total: 600,  available: 22  } },
-    { name: 'Ram Manohar Lohia Hospital',type: 'Government', phone: '011-23404482', distance: 6.7, beds: { total: 1500, available: 64  } },
-  ]
+  await seedEmergencyData()
+
+  // Execute $geoNear query using MongoDB aggregation
+  const hospitals = await Hospital.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [lng, lat] // [longitude, latitude]
+        },
+        distanceField: 'distance', // calculated distance field in meters
+        maxDistance: radius * 1000, // max distance in meters
+        spherical: true
+      }
+    }
+  ])
+
+  // Format response matching the expected frontend schema
+  const formattedHospitals = hospitals.map(h => ({
+    name: h.name,
+    type: h.type,
+    phone: h.phone,
+    distance: parseFloat((h.distance / 1000).toFixed(1)), // convert meters to km with 1 decimal place
+    beds: h.beds,
+    lat: h.location.coordinates[1],
+    lng: h.location.coordinates[0]
+  }))
 
   return ApiResponse.success(res, {
-    data: { hospitals, userLocation: { lat, lng }, radius },
-    message: `Found ${hospitals.length} hospitals within ${radius}km`,
+    data: { hospitals: formattedHospitals, userLocation: { lat, lng }, radius },
+    message: `Found ${formattedHospitals.length} hospitals within ${radius}km`,
   })
 }))
 
@@ -66,16 +120,37 @@ router.get('/hospitals/nearby', asyncWrapper(async (req, res) => {
  * Get police stations near a coordinate
  */
 router.get('/police/nearby', asyncWrapper(async (req, res) => {
-  const { lat, lng, radius = 5 } = req.query
+  const lat = parseFloat(req.query.lat) || 28.5672
+  const lng = parseFloat(req.query.lng) || 77.2100
+  const radius = parseFloat(req.query.radius) || 5
 
-  const stations = [
-    { name: 'Connaught Place Police Station', phone: '011-23741350', distance: 1.2 },
-    { name: 'Parliament Street Police Station', phone: '011-23741356', distance: 2.4 },
-    { name: 'Janpath Police Station',           phone: '011-23741360', distance: 3.1 },
-  ]
+  await seedEmergencyData()
+
+  const stations = await PoliceStation.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [lng, lat] // [longitude, latitude]
+        },
+        distanceField: 'distance',
+        maxDistance: radius * 1000,
+        spherical: true
+      }
+    }
+  ])
+
+  const formattedStations = stations.map(s => ({
+    name: s.name,
+    phone: s.phone,
+    distance: parseFloat((s.distance / 1000).toFixed(1)),
+    lat: s.location.coordinates[1],
+    lng: s.location.coordinates[0]
+  }))
 
   return ApiResponse.success(res, {
-    data: { stations, userLocation: { lat, lng }, radius },
+    data: { stations: formattedStations, userLocation: { lat, lng }, radius },
+    message: `Found ${formattedStations.length} police stations within ${radius}km`,
   })
 }))
 

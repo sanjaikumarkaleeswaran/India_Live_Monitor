@@ -14,6 +14,13 @@ export const getNearbyHospitals = async (lat, lng, radius) => {
   return response.data.data
 }
 
+export const getNearbyPolice = async (lat, lng, radius) => {
+  const response = await api.get('/emergency/police/nearby', {
+    params: { lat, lng, radius }
+  })
+  return response.data.data
+}
+
 export const triggerSOS = async (sosData) => {
   const response = await api.post('/emergency/sos', sosData)
   return response.data.data

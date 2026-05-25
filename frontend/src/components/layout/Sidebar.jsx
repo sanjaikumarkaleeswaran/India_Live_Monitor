@@ -7,32 +7,29 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Map, Fuel, Cloud, Wind, Siren,
   Shield, FileText, Settings2, LogOut, ChevronLeft,
-  Activity, X, User,
+  Activity, X, Cpu, AlertTriangle,
 } from 'lucide-react'
 import { toggleSidebar, setSidebarMobileOpen } from '../../app/uiSlice'
 import { logoutUser } from '../../features/auth/store/authSlice'
 import { selectUser, selectIsAdmin } from '../../features/auth/store/authSlice'
-import { APP_NAME } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
-const iconMap = {
-  LayoutDashboard, Map, Fuel, Cloud, Wind, Siren,
-  Shield, FileText, Settings2, Activity,
-}
+const iconMap = { LayoutDashboard, Map, Fuel, Cloud, Wind, Siren, Shield, FileText, Settings2, Activity }
 
 const navLinks = [
-  { path: '/dashboard',  label: 'Dashboard',   icon: 'LayoutDashboard' },
-  { path: '/map',        label: 'Live Map',     icon: 'Map' },
-  { path: '/fuel',       label: 'Fuel Monitor', icon: 'Fuel' },
-  { path: '/weather',    label: 'Weather',      icon: 'Cloud' },
-  { path: '/aqi',        label: 'Air Quality',  icon: 'Wind' },
-  { path: '/emergency',  label: 'Emergency',    icon: 'Siren' },
-  { path: '/safety',     label: 'Safety',       icon: 'Shield' },
-  { path: '/reports',    label: 'Reports',      icon: 'FileText' },
+  { path: '/dashboard',  label: 'Dashboard',     icon: 'LayoutDashboard', color: '#00E5FF' },
+  { path: '/map',        label: 'Live Map',       icon: 'Map',             color: '#00FF88' },
+  { path: '/fuel',       label: 'Fuel Monitor',   icon: 'Fuel',            color: '#FFB830' },
+  { path: '/weather',    label: 'Weather',        icon: 'Cloud',           color: '#7B61FF' },
+  { path: '/aqi',        label: 'Air Quality',    icon: 'Wind',            color: '#00C96E' },
+  { path: '/emergency',  label: 'Emergency',      icon: 'Siren',           color: '#FF3D5A' },
+  { path: '/safety',     label: 'Safety',         icon: 'Shield',          color: '#00E5FF' },
+  { path: '/reports',    label: 'Reports',        icon: 'FileText',        color: '#FFB830' },
+  { path: '/alerts',     label: 'Alerts',         icon: 'Activity',        color: '#FF3D5A' },
 ]
 
 const adminLinks = [
-  { path: '/admin',      label: 'Admin Panel',  icon: 'Settings2' },
+  { path: '/admin', label: 'Admin Panel', icon: 'Settings2', color: '#7B61FF' },
 ]
 
 const Sidebar = () => {
@@ -45,12 +42,11 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     await dispatch(logoutUser())
-    toast.success('Logged out successfully')
+    toast.success('Session terminated')
     router.push('/login')
   }
 
   const closeMobile = () => dispatch(setSidebarMobileOpen(false))
-
   const allLinks = isAdmin ? [...navLinks, ...adminLinks] : navLinks
 
   return (
@@ -59,7 +55,8 @@ const Sidebar = () => {
       <AnimatePresence>
         {sidebarMobileOpen && (
           <motion.div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 z-40 md:hidden"
+            style={{ background: 'rgba(4,8,15,0.8)', backdropFilter: 'blur(8px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -68,102 +65,203 @@ const Sidebar = () => {
         )}
       </AnimatePresence>
 
-      {/* Sidebar Panel */}
+      {/* Sidebar */}
       <aside
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarMobileOpen ? 'mobile-open' : ''}`}
         style={{ display: 'flex', flexDirection: 'column' }}
       >
-        {/* ── Logo ────────────────────────────── */}
-        <div
-          className="flex items-center justify-between px-4 py-5 border-b"
-          style={{ borderColor: 'var(--border-subtle)', minHeight: 72 }}
-        >
+        {/* ── Logo ── */}
+        <div style={{
+          minHeight: 72,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          borderBottom: '1px solid rgba(0,229,255,0.1)',
+        }}>
           <AnimatePresence mode="wait">
             {!sidebarCollapsed && (
               <motion.div
                 className="flex items-center gap-3"
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
+                exit={{ opacity: 0, x: -12 }}
                 transition={{ duration: 0.2 }}
               >
-                {/* India flag colors as logo */}
-                <div className="relative w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}>
-                  <Activity size={18} className="text-white" />
+                {/* Logo Icon */}
+                <div style={{
+                  width: 40, height: 40,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, rgba(0,229,255,0.2), rgba(123,97,255,0.2))',
+                  border: '1px solid rgba(0,229,255,0.3)',
+                  boxShadow: '0 0 20px rgba(0,229,255,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Cpu size={18} color="#00E5FF" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
-                    Smart India
+                  <div style={{
+                    fontSize: 13, fontWeight: 800,
+                    color: '#E8F4FD',
+                    letterSpacing: '-0.01em',
+                    lineHeight: 1.2,
+                  }}>
+                    SILM
+                    <span style={{ color: '#00E5FF', marginLeft: 4 }}>🇮🇳</span>
                   </div>
-                  <div className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                    LIVE MONITOR
+                  <div style={{
+                    fontSize: 9, fontWeight: 600,
+                    color: '#4A6B8A',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    marginTop: 2,
+                  }}>
+                    LIVE COMMAND CENTER
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Collapse toggle (desktop) */}
+          {/* Collapse toggle — desktop */}
           <button
             onClick={() => dispatch(toggleSidebar())}
-            className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg transition-colors hover:bg-white/5"
-            style={{ color: 'var(--text-muted)' }}
+            className="hidden md:flex"
+            style={{
+              width: 28, height: 28,
+              borderRadius: 8,
+              background: 'rgba(0,229,255,0.06)',
+              border: '1px solid rgba(0,229,255,0.1)',
+              color: '#4A6B8A',
+              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
           >
-            <motion.div animate={{ rotate: sidebarCollapsed ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronLeft size={16} />
+            <motion.div animate={{ rotate: sidebarCollapsed ? 180 : 0 }} transition={{ duration: 0.25 }}>
+              <ChevronLeft size={14} />
             </motion.div>
           </button>
 
-          {/* Close (mobile) */}
+          {/* Close — mobile */}
           <button
             onClick={closeMobile}
-            className="flex md:hidden items-center justify-center w-7 h-7 rounded-lg"
-            style={{ color: 'var(--text-muted)' }}
+            className="flex md:hidden"
+            style={{ color: '#4A6B8A', cursor: 'pointer' }}
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* ── Navigation ──────────────────────── */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
-          {/* Label */}
+        {/* ── System Status ── */}
+        {!sidebarCollapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              margin: '12px 12px 4px',
+              padding: '8px 12px',
+              borderRadius: 10,
+              background: 'rgba(0,255,136,0.06)',
+              border: '1px solid rgba(0,255,136,0.15)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}
+          >
+            <div className="live-dot" />
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#00FF88', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              All Systems Live
+            </span>
+          </motion.div>
+        )}
+
+        {/* ── Navigation ── */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 10px' }}>
           {!sidebarCollapsed && (
-            <div className="px-3 mb-2 text-[10px] font-semibold tracking-widest uppercase"
-              style={{ color: 'var(--text-muted)' }}>
+            <div style={{
+              padding: '8px 10px 6px',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: '#2A4A6A',
+            }}>
               Navigation
             </div>
           )}
 
-          <ul className="space-y-1">
+          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {allLinks.map((link) => {
               const Icon = iconMap[link.icon]
               const isActive = pathname === link.path
+
               return (
                 <li key={link.path}>
                   <Link
                     href={link.path}
                     onClick={closeMobile}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                      transition-all duration-150 group relative
-                      ${isActive
-                        ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
-                        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'
-                      }
-                      ${sidebarCollapsed ? 'justify-center' : ''}
-                    `}
                     title={sidebarCollapsed ? link.label : undefined}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: sidebarCollapsed ? '10px 0' : '9px 12px',
+                      justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                      borderRadius: 12,
+                      textDecoration: 'none',
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 500,
+                      position: 'relative',
+                      transition: 'all 0.18s',
+                      color: isActive ? link.color : '#4A6B8A',
+                      background: isActive
+                        ? `linear-gradient(135deg, ${link.color}12, ${link.color}06)`
+                        : 'transparent',
+                      border: `1px solid ${isActive ? `${link.color}30` : 'transparent'}`,
+                      boxShadow: isActive ? `0 0 16px ${link.color}10` : 'none',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'rgba(0,229,255,0.05)'
+                        e.currentTarget.style.color = '#8BAFD4'
+                        e.currentTarget.style.borderColor = 'rgba(0,229,255,0.1)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.color = '#4A6B8A'
+                        e.currentTarget.style.borderColor = 'transparent'
+                      }
+                    }}
                   >
                     {isActive && (
                       <motion.div
-                        className="absolute left-0 top-1/2 w-0.5 h-5 -translate-y-1/2 rounded-full bg-orange-400"
-                        layoutId="activeIndicator"
+                        layoutId="activeBar"
+                        style={{
+                          position: 'absolute',
+                          left: 0, top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 3, height: 24,
+                          borderTopRightRadius: 4,
+                          borderBottomRightRadius: 4,
+                          background: link.color,
+                          boxShadow: `2px 0 12px ${link.color}90`,
+                        }}
                       />
                     )}
-                    {Icon && <Icon size={18} className="flex-shrink-0" />}
+                    {Icon && (
+                      <Icon
+                        size={16}
+                        style={{
+                          flexShrink: 0,
+                          color: isActive ? link.color : 'currentColor',
+                          filter: isActive ? `drop-shadow(0 0 4px ${link.color}80)` : 'none',
+                        }}
+                      />
+                    )}
                     {!sidebarCollapsed && (
-                      <span className="truncate">{link.label}</span>
+                      <span style={{ truncate: true }}>{link.label}</span>
                     )}
                   </Link>
                 </li>
@@ -172,37 +270,81 @@ const Sidebar = () => {
           </ul>
         </nav>
 
-        {/* ── User Profile + Logout ─────────── */}
-        <div className="border-t p-3 mt-auto bg-[var(--bg-surface)]" style={{ borderColor: 'var(--border-subtle)' }}>
-          {!sidebarCollapsed ? (
-            <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer mb-2"
-              onClick={() => router.push('/profile')}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}>
+        {/* ── User + Logout ── */}
+        <div style={{
+          borderTop: '1px solid rgba(0,229,255,0.08)',
+          padding: 10,
+          background: 'rgba(0,0,0,0.3)',
+        }}>
+          {!sidebarCollapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              onClick={() => router.push('/profile')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                marginBottom: 6,
+                background: 'rgba(0,229,255,0.04)',
+                border: '1px solid rgba(0,229,255,0.08)',
+                transition: 'all 0.2s',
+              }}
+            >
+              {/* Avatar */}
+              <div style={{
+                width: 34, height: 34,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #FF9933, #138808)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 800, color: 'white',
+                flexShrink: 0,
+                boxShadow: '0 0 12px rgba(255,153,51,0.3)',
+              }}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate text-white">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#E8F4FD', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.name || 'User'}
                 </div>
-                <div className="text-[10px] font-bold tracking-wider uppercase text-orange-400 truncate">
-                  {user?.role || 'USER'}
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#00E5FF', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  {user?.role || 'OPERATOR'}
                 </div>
               </div>
-            </div>
-          ) : null}
+            </motion.div>
+          )}
 
           <button
             onClick={handleLogout}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-              text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150 cursor-pointer
-              ${sidebarCollapsed ? 'justify-center' : ''}
-            `}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              gap: 8,
+              padding: '8px 12px',
+              borderRadius: 10,
+              background: 'rgba(255,61,90,0.06)',
+              border: '1px solid rgba(255,61,90,0.12)',
+              color: '#FF8099',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
             title={sidebarCollapsed ? 'Logout' : undefined}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,61,90,0.12)'
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(255,61,90,0.15)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,61,90,0.06)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
-            <LogOut size={16} />
-            {!sidebarCollapsed && <span>Logout</span>}
+            <LogOut size={14} />
+            {!sidebarCollapsed && <span>Terminate Session</span>}
           </button>
         </div>
       </aside>

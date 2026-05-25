@@ -137,7 +137,7 @@ const EmergencyPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🚨 Emergency Response & SOS</h2>
@@ -147,7 +147,7 @@ const EmergencyPage = () => {
       </motion.div>
 
       {/* Main SOS Trigger Hub */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
         {/* SOS Panel */}
         <motion.div
           className="glass-card p-6 flex flex-col justify-between items-center text-center min-h-[300px] border-red-500/20"
@@ -247,12 +247,12 @@ const EmergencyPage = () => {
       </div>
 
       {/* Helplines and First Aid Guides */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
         {/* Contacts */}
         <motion.div className="glass-card p-5 lg:col-span-2"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--text-primary)' }}>National Helplines Grid</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
             {contacts?.contacts?.slice(0, 10).map((c) => (
               <a key={c.number} href={`tel:${c.number}`}
                 className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all border group"
@@ -271,7 +271,7 @@ const EmergencyPage = () => {
         <motion.div className="glass-card p-5"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <h3 className="font-bold text-lg mb-4" style={{ color: 'var(--text-primary)' }}>First Aid & Safety Guides</h3>
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {FIRST_AID_GUIDES.map((guide, idx) => (
               <div key={idx} className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-subtle)' }}>
                 <button

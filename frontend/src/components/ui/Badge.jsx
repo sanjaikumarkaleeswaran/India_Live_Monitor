@@ -43,12 +43,24 @@ const Badge = ({
 }
 
 /**
- * LiveBadge — Animated "LIVE" indicator
+ * LiveBadge — Animated "LIVE" indicator (SILM Command Center style)
  */
 export const LiveBadge = ({ className = '' }) => (
-  <span className={`inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 ${className}`}>
-    <span className="live-dot scale-75" />
-    LIVE
+  <span
+    className={`inline-flex items-center gap-1.5 font-bold ${className}`}
+    style={{
+      fontSize: 9,
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      color: '#00FF88',
+      background: 'rgba(0,255,136,0.08)',
+      border: '1px solid rgba(0,255,136,0.2)',
+      padding: '2px 7px',
+      borderRadius: 20,
+    }}
+  >
+    <span className="live-dot" style={{ width: 5, height: 5 }} />
+    Live
   </span>
 )
 

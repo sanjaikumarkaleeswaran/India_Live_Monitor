@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import { Siren, Hospital, ShieldAlert, Crosshair, HelpCircle, Layers, ZoomIn } from 'lucide-react'
 import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
-import { getEmergencyContacts } from '../../emergency/services/emergencyService'
+import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 
 // Fix Leaflet marker icon asset paths in Vite
@@ -54,18 +54,25 @@ const LiveMapPage = () => {
     queryFn: () => getAlerts({ limit: 50 }),
   })
 
-  // Mock safety checkpoints / emergency centers (e.g. hospitals, police stations in major cities)
-  const safetyCenters = [
-    { name: 'AIIMS New Delhi', lat: 28.5672, lng: 77.2100, type: 'hospital', phone: '011-26588500' },
-    { name: 'Mumbai General Hospital', lat: 18.9401, lng: 72.8348, type: 'hospital', phone: '022-22621415' },
-    { name: 'Chennai Rajiv Gandhi Govt Hospital', lat: 13.0818, lng: 80.2748, type: 'hospital', phone: '044-25305000' },
-    { name: 'Kolkata Medical College', lat: 22.5726, lng: 88.3639, type: 'hospital', phone: '033-22414901' },
-    { name: 'Bengaluru Victoria Hospital', lat: 12.9632, lng: 77.5739, type: 'hospital', phone: '080-26701150' },
-    { name: 'Delhi Police HQ', lat: 28.6295, lng: 77.2185, type: 'police', phone: '100' },
-    { name: 'Mumbai Police HQ', lat: 18.9324, lng: 72.8361, type: 'police', phone: '100' },
-  ]
+  // Fetch live hospitals for the GIS map overlay
+  const { data: hospitalsResponse, isLoading: hospitalsLoading } = useQuery({
+    queryKey: ['mapHospitals'],
+    queryFn: () => getNearbyHospitals(20.5937, 78.9629, 3000), // National search centering on India
+  })
+
+  // Fetch live police stations for the GIS map overlay
+  const { data: policeResponse, isLoading: policeLoading } = useQuery({
+    queryKey: ['mapPolice'],
+    queryFn: () => getNearbyPolice(20.5937, 78.9629, 3000), // National search centering on India
+  })
 
   const alerts = alertsResponse?.data || []
+
+  // Combine fetched resources into safetyCenters array
+  const safetyCenters = [
+    ...(hospitalsResponse?.hospitals || []).map(h => ({ ...h, type: 'hospital' })),
+    ...(policeResponse?.stations || []).map(p => ({ ...p, type: 'police' }))
+  ]
 
   // Filters calculation
   const displayedAlerts = filter === 'all' || filter === 'alerts' ? alerts : []
@@ -80,7 +87,7 @@ const LiveMapPage = () => {
     }
   }
 
-  const isLoading = alertsLoading
+  const isLoading = alertsLoading || hospitalsLoading || policeLoading
 
   if (isLoading) {
     return (
@@ -92,7 +99,7 @@ const LiveMapPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <motion.div className="flex justify-between items-center flex-wrap gap-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -115,16 +122,16 @@ const LiveMapPage = () => {
       </motion.div>
 
       {/* Control Panel Drawer */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 space-y-4">
-          <motion.div className="glass-card p-5 space-y-4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-4" style={{ gap: 24 }}>
+        <div className="lg:col-span-1" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <motion.div className="glass-card p-5" style={{ display: 'flex', flexDirection: 'column', gap: 16 }} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <h3 className="font-bold text-base flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <Layers size={16} className="text-orange-400" />
               Layer Controls
             </h3>
             
             {/* Filters */}
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => setFilter('all')}
                 className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
                 style={{
@@ -185,9 +192,9 @@ const LiveMapPage = () => {
             </div>
 
             {/* Severity Legend */}
-            <div className="pt-4 border-t border-white/5 space-y-2">
+            <div className="pt-4 border-t border-white/5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p className="text-[10px] uppercase font-bold tracking-wider text-muted">Alert Risk Levels</p>
-              <div className="space-y-1.5 text-xs text-secondary">
+              <div className="text-xs text-secondary" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Critical Danger Zone</div>
                 <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> High Alert Sector</div>
                 <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> Medium Warning Region</div>

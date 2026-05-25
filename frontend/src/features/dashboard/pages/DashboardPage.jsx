@@ -16,109 +16,88 @@ import { getFuelPrices } from '../../fuel/services/fuelService'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts } from '../../emergency/services/emergencyService'
 
-// ── Mock weather (to be replaced by API in Phase 3) ────────
-const MOCK_WEATHER = {
-  city: 'Delhi', temp: 38, feelsLike: 41, humidity: 42, windSpeed: 14,
-  condition: 'Clear Sky', icon: '☀️',
-}
+const MOCK_WEATHER = { city: 'Delhi', temp: 38, feelsLike: 41, humidity: 42, windSpeed: 14, condition: 'Clear Sky', icon: '☀️' }
 
 const MOCK_AQI = [
-  { city: 'Delhi',     aqi: 287, category: 'Poor' },
-  { city: 'Mumbai',    aqi: 142, category: 'Moderate' },
-  { city: 'Chennai',   aqi: 68,  category: 'Satisfactory' },
-  { city: 'Kolkata',   aqi: 198, category: 'Moderate' },
-  { city: 'Bengaluru', aqi: 84,  category: 'Satisfactory' },
+  { city: 'Delhi',     aqi: 287 },
+  { city: 'Mumbai',    aqi: 142 },
+  { city: 'Chennai',   aqi: 68  },
+  { city: 'Kolkata',   aqi: 198 },
+  { city: 'Bengaluru', aqi: 84  },
 ]
 
-// ── Stat Card Component ────────────────────────────────────
+// ── Stat Card (SILM) ─────────────────────────────────────────
 const StatCard = ({ icon: Icon, label, value, sub, color, trend, delay = 0 }) => (
   <motion.div
-    className="stat-card"
-    initial={{ opacity: 0, y: 20 }}
+    initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.4 }}
+    transition={{ delay, duration: 0.4, ease: 'easeOut' }}
+    whileHover={{ y: -2, boxShadow: `0 0 28px ${color}22, 0 4px 24px rgba(0,0,0,0.8)` }}
+    style={{
+      background: 'rgba(10,22,40,0.85)',
+      border: `1px solid ${color}22`,
+      borderRadius: 20, padding: 20,
+      position: 'relative', overflow: 'hidden',
+      backdropFilter: 'blur(20px)',
+      boxShadow: `0 4px 24px rgba(0,0,0,0.6)`,
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+    }}
   >
-    <div className="flex items-start justify-between mb-4">
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${color}18`, border: `1px solid ${color}28` }}>
-        <Icon size={20} style={{ color }} />
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}15`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 12px ${color}20`, flexShrink: 0 }}>
+        <Icon size={16} style={{ color }} />
       </div>
       {trend !== undefined && (
-        <div className={`flex items-center gap-1 text-xs font-medium ${
-          trend > 0 ? 'text-red-400' : trend < 0 ? 'text-emerald-400' : 'text-slate-400'
-        }`}>
-          {trend > 0 ? <TrendingUp size={12} /> : trend < 0 ? <TrendingDown size={12} /> : <Minus size={12} />}
-          {trend !== 0 ? `${Math.abs(trend).toFixed(2)}` : 'Stable'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: trend > 0 ? 'rgba(255,61,90,0.1)' : trend < 0 ? 'rgba(0,255,136,0.1)' : 'rgba(0,229,255,0.08)', color: trend > 0 ? '#FF8099' : trend < 0 ? '#00FF88' : '#00E5FF', border: `1px solid ${trend > 0 ? 'rgba(255,61,90,0.2)' : trend < 0 ? 'rgba(0,255,136,0.2)' : 'rgba(0,229,255,0.15)'}` }}>
+          {trend > 0 ? <TrendingUp size={10} /> : trend < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
+          {trend !== 0 ? Math.abs(trend).toFixed(2) : 'Stable'}
         </div>
       )}
     </div>
-    <div className="space-y-1">
-      <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{value}</p>
-      {sub && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>}
+    <div>
+      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#4A6B8A', marginBottom: 4 }}>{label}</p>
+      <p style={{ fontSize: 26, fontWeight: 800, color: '#E8F4FD', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
+      {sub && <p style={{ fontSize: 11, color: '#4A6B8A', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>}
     </div>
   </motion.div>
 )
 
-// ── Alert Row ──────────────────────────────────────────────
+// ── Alert Row (SILM) ─────────────────────────────────────────
 const AlertRow = ({ alert }) => {
-  const severityColors = {
-    critical: { text: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)' },
-    high:     { text: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' },
-    medium:   { text: '#6366f1', bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.25)' },
-    low:      { text: '#10b981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.25)' },
-  }
-  const s = severityColors[alert.severity] || severityColors.medium
-
+  const sc = { critical: '#FF3D5A', high: '#FFB830', medium: '#7B61FF', low: '#00FF88' }
+  const c = sc[alert.severity] || sc.medium
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-white/5"
-      style={{ border: `1px solid ${s.border}`, background: s.bg }}>
-      <AlertTriangle size={16} style={{ color: s.text, flexShrink: 0 }} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{alert.title}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <MapPin size={10} style={{ color: 'var(--text-muted)' }} />
-          <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-            {alert.affectedStates?.join(', ') || 'National'}
-          </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, border: `1px solid ${c}18`, background: `${c}06`, transition: 'all 0.2s' }}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${c}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <AlertTriangle size={13} style={{ color: c }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#E8F4FD', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.title}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+          <MapPin size={10} style={{ color: '#4A6B8A' }} />
+          <span style={{ fontSize: 11, color: '#4A6B8A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.affectedStates?.join(', ') || 'National'}</span>
         </div>
       </div>
-      <div className="text-right flex-shrink-0">
-        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-          style={{ color: s.text, background: `${s.text}20` }}>
-          {alert.severity}
-        </span>
-        <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>{formatTimeAgo(alert.createdAt)}</p>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: c, background: `${c}18`, border: `1px solid ${c}30`, padding: '2px 8px', borderRadius: 20 }}>{alert.severity}</span>
+        <p style={{ fontSize: 10, color: '#4A6B8A', marginTop: 4 }}>{formatTimeAgo(alert.createdAt)}</p>
       </div>
     </div>
   )
 }
 
-// ── Main Dashboard ─────────────────────────────────────────
+// ── Main Dashboard ────────────────────────────────────────────
 const DashboardPage = () => {
   const user = useSelector(selectUser)
 
-  // ── Queries ──
-  const { data: fuelData, isLoading: fuelLoading } = useQuery({
-    queryKey: ['fuelPrices'],
-    queryFn: getFuelPrices,
-  })
-
-  const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: () => getAlerts({ limit: 4 }),
-  })
-
-  const { data: contactsData, isLoading: contactsLoading } = useQuery({
-    queryKey: ['emergencyContacts'],
-    queryFn: () => getEmergencyContacts(),
-  })
+  const { data: fuelData, isLoading: fuelLoading } = useQuery({ queryKey: ['fuelPrices'], queryFn: getFuelPrices })
+  const { data: alertsResponse, isLoading: alertsLoading } = useQuery({ queryKey: ['alerts'], queryFn: () => getAlerts({ limit: 4 }) })
+  const { data: contactsData, isLoading: contactsLoading } = useQuery({ queryKey: ['emergencyContacts'], queryFn: () => getEmergencyContacts() })
 
   const alerts = alertsResponse?.data || []
   const fuelList = fuelData?.prices?.slice(0, 5) || []
   const avgPetrol = fuelData?.summary?.avgPetrol || 101.50
-  const avgDiesel = fuelData?.summary?.avgDiesel || 89.20
-
   const avgAQI = Math.round(MOCK_AQI.reduce((s, a) => s + a.aqi, 0) / MOCK_AQI.length)
   const aqiLevel = getAQILevel(avgAQI)
 
@@ -129,15 +108,13 @@ const DashboardPage = () => {
     return 'Good evening'
   }
 
-  const isLoading = fuelLoading || alertsLoading || contactsLoading
-
-  if (isLoading) {
+  if (fuelLoading || alertsLoading || contactsLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <SkeletonStatCard key={i} />)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          {[1,2,3,4].map(i => <SkeletonStatCard key={i} />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 20 }}>
           <div className="lg:col-span-2"><SkeletonCard /></div>
           <div><SkeletonCard /></div>
         </div>
@@ -146,175 +123,143 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ── Header ── */}
-      <motion.div className="flex items-start justify-between flex-wrap gap-4"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Header */}
+      <motion.div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {greeting()}, {user?.name?.split(' ')[0] || 'Citizen'} 👋
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#E8F4FD', letterSpacing: '-0.02em' }}>
+            {greeting()},{' '}
+            <span style={{ color: '#00E5FF', textShadow: '0 0 20px rgba(0,229,255,0.4)' }}>{user?.name?.split(' ')[0] || 'Operator'}</span>
           </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Here's what's happening across India right now.
-          </p>
+          <p style={{ fontSize: 12, color: '#4A6B8A', marginTop: 4 }}>National command overview — all modules reporting live data.</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-          style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#6ee7b7' }}>
-          <Activity size={14} />
-          <span className="font-medium">All systems operational</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 24, background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.2)' }}>
+          <Activity size={13} style={{ color: '#00FF88' }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#00FF88', letterSpacing: '0.06em' }}>System Operational</span>
           <LiveBadge />
         </div>
       </motion.div>
 
-      {/* ── Key Metrics ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Fuel} label="Avg. Petrol Price" value={`₹${avgPetrol.toFixed(2)}`}
-          sub="National average today" color="#f97316" trend={0.00} delay={0.05} />
-        <StatCard icon={Thermometer} label="Delhi Temperature" value={`${MOCK_WEATHER.temp}°C`}
-          sub={`Feels like ${MOCK_WEATHER.feelsLike}°C · ${MOCK_WEATHER.condition}`}
-          color="#6366f1" delay={0.1} />
-        <StatCard icon={Wind} label="Avg. National AQI"
-          value={avgAQI}
-          sub={aqiLevel.label}
-          color={aqiLevel.color} delay={0.15} />
-        <StatCard icon={Siren} label="Active Alerts" value={alerts.length}
-          sub={`${alerts.filter(a => a.severity === 'critical').length} critical`}
-          color="#ef4444" delay={0.2} />
+      {/* Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+        <StatCard icon={Fuel} label="Avg. Petrol Price" value={`₹${avgPetrol.toFixed(2)}`} sub="National average today" color="#FFB830" trend={0.00} delay={0.05} />
+        <StatCard icon={Thermometer} label="Delhi Temperature" value={`${MOCK_WEATHER.temp}°C`} sub={`Feels like ${MOCK_WEATHER.feelsLike}°C`} color="#7B61FF" delay={0.1} />
+        <StatCard icon={Wind} label="Avg. National AQI" value={avgAQI} sub={aqiLevel.label} color="#00E5FF" delay={0.15} />
+        <StatCard icon={Siren} label="Active Alerts" value={alerts.length} sub={`${alerts.filter(a => a.severity === 'critical').length} critical`} color="#FF3D5A" delay={0.2} />
       </div>
 
-      {/* ── Main Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Active Alerts */}
-        <motion.div className="glass-card p-5 lg:col-span-2"
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Siren size={18} className="text-red-400" />
-              <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Active Alerts</h3>
+      {/* Alerts + Emergency */}
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 20 }}>
+        <motion.div className="glass-card lg:col-span-2" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Siren size={15} style={{ color: '#FF3D5A', filter: 'drop-shadow(0 0 4px rgba(255,61,90,0.5))' }} />
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD' }}>Active Alerts</h3>
               <LiveBadge />
             </div>
-            <a href="/alerts" className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors">
-              View all <ArrowUpRight size={12} />
-            </a>
+            <a href="/alerts" style={{ fontSize: 11, color: '#4A6B8A', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>View all <ArrowUpRight size={11} /></a>
           </div>
-          <div className="space-y-2">
-            {alerts.length > 0 ? (
-              alerts.map((a) => <AlertRow key={a._id} alert={a} />)
-            ) : (
-              <p className="text-sm py-4 text-center" style={{ color: 'var(--text-muted)' }}>No active alerts currently reported.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            {alerts.length > 0 ? alerts.map(a => <AlertRow key={a._id} alert={a} />) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(0,229,255,0.1)', borderRadius: 12, padding: 20 }}>
+                <p style={{ fontSize: 13, color: '#4A6B8A' }}>No active alerts reported.</p>
+              </div>
             )}
           </div>
         </motion.div>
 
-        {/* Emergency Helplines */}
-        <motion.div className="glass-card p-5 flex flex-col justify-between"
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div className="glass-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Phone size={18} className="text-emerald-400" />
-              <h3 className="font-bold text-base text-white">Emergency Helplines</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Phone size={15} style={{ color: '#00E5FF' }} />
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD' }}>Emergency Numbers</h3>
             </div>
-            <div className="space-y-2">
-              {contactsData?.contacts?.slice(0, 6).map((num) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {contactsData?.contacts?.slice(0, 5).map(num => (
                 <a key={num.number} href={`tel:${num.number}`}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 border border-[var(--border-subtle)] hover:border-orange-500/30 transition-all duration-200 group transform hover:translate-x-1"
-                >
-                  <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{num.name}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold transition-colors"
-                      style={{ color: num.color || '#3b82f6' }}>{num.number}</span>
-                  </div>
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 10, border: '1px solid transparent', textDecoration: 'none', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,229,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(0,229,255,0.1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}>
+                  <span style={{ fontSize: 12, color: '#8BAFD4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{num.name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{num.number}</span>
                 </a>
               ))}
             </div>
           </div>
-          <a href="tel:112" className="mt-4 block relative overflow-hidden group rounded-xl p-3 text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.15) 100%)', 
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)'
-            }}>
-            {/* Shimmer background animation */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer-slide" />
-            <p className="text-[10px] font-bold tracking-widest uppercase text-red-300 group-hover:text-red-200 transition-colors">National Emergency Response</p>
-            <div className="flex items-center justify-center gap-2 mt-0.5">
-              <Phone size={18} className="text-red-400 group-hover:animate-bounce" />
-              <p className="text-2xl font-black text-red-400 group-hover:text-red-300 transition-colors">112</p>
+          <a href="tel:112"
+            style={{ marginTop: 16, display: 'block', borderRadius: 12, padding: '12px 0', textAlign: 'center', background: 'linear-gradient(135deg, rgba(255,61,90,0.2), rgba(255,61,90,0.1))', border: '1px solid rgba(255,61,90,0.3)', boxShadow: '0 0 20px rgba(255,61,90,0.12)', textDecoration: 'none', transition: 'all 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(255,61,90,0.3)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(255,61,90,0.12)'}>
+            <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#FF8099' }}>National Emergency</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 }}>
+              <Phone size={14} style={{ color: '#FF3D5A' }} />
+              <p style={{ fontSize: 22, fontWeight: 900, color: '#FF3D5A', fontFamily: 'JetBrains Mono, monospace', textShadow: '0 0 12px rgba(255,61,90,0.5)' }}>112</p>
             </div>
           </a>
         </motion.div>
       </div>
 
-      {/* ── Fuel + AQI Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Fuel Prices */}
-        <motion.div className="glass-card p-5"
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Fuel size={18} className="text-orange-400" />
-              <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>Fuel Prices Today</h3>
+      {/* Fuel + AQI */}
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
+        <motion.div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Fuel size={15} style={{ color: '#FFB830' }} />
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD' }}>Fuel Prices Today</h3>
             </div>
-            <a href="/fuel" className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors">
-              Compare states <ArrowUpRight size={12} />
-            </a>
+            <a href="/fuel" style={{ fontSize: 11, color: '#4A6B8A', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>Compare <ArrowUpRight size={11} /></a>
           </div>
-          <div className="space-y-2">
-            {fuelList.map((f) => (
-              <div key={f.stateCode} className="flex items-center justify-between py-2 border-b last:border-0"
-                style={{ borderColor: 'var(--border-subtle)' }}>
-                <div className="flex items-center gap-2">
-                  <MapPin size={12} style={{ color: 'var(--text-muted)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{f.stateName}</span>
+          <div style={{ flex: 1 }}>
+            {fuelList.map((f, i) => (
+              <div key={f.stateCode} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < fuelList.length - 1 ? '1px solid rgba(0,229,255,0.05)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <MapPin size={11} style={{ color: '#4A6B8A' }} />
+                  <span style={{ fontSize: 13, color: '#8BAFD4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{f.stateName}</span>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="font-bold text-orange-400">₹{f.petrol?.price || f.petrol}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>₹{f.diesel?.price || f.diesel}</span>
-                  <span className="text-xs font-medium text-slate-500">—</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+                  <span style={{ color: '#FFB830' }}>₹{f.petrol?.price || f.petrol}</span>
+                  <span style={{ color: '#4A6B8A' }}>₹{f.diesel?.price || f.diesel}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-3 flex gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />Petrol</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />Diesel</span>
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(0,229,255,0.06)', display: 'flex', gap: 16, fontSize: 11, color: '#4A6B8A' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FFB830', display: 'inline-block', boxShadow: '0 0 4px #FFB830' }} />Petrol</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4A6B8A', display: 'inline-block' }} />Diesel</span>
           </div>
         </motion.div>
 
-        {/* AQI */}
-        <motion.div className="glass-card p-5"
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Wind size={18} className="text-blue-400" />
-            <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>City AQI Monitor</h3>
+        <motion.div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <Wind size={15} style={{ color: '#00E5FF' }} />
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#E8F4FD' }}>City AQI Monitor</h3>
           </div>
-          <div className="space-y-3">
-            {MOCK_AQI.map((a) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+            {MOCK_AQI.map(a => {
               const lvl = getAQILevel(a.aqi)
               const pct = Math.min((a.aqi / 500) * 100, 100)
               return (
                 <div key={a.city}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{a.city}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold" style={{ color: lvl.color }}>{a.aqi}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: lvl.bg, color: lvl.color }}>{lvl.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, color: '#8BAFD4' }}>{a.city}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: lvl.color, fontFamily: 'JetBrains Mono, monospace' }}>{a.aqi}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: lvl.color, background: `${lvl.color}15`, border: `1px solid ${lvl.color}30`, padding: '1px 6px', borderRadius: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{lvl.label}</span>
                     </div>
                   </div>
-                  <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                    <motion.div className="h-full rounded-full"
-                      style={{ background: lvl.color, width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ delay: 0.5, duration: 0.8, ease: 'easeOut' }}
-                    />
+                  <div style={{ height: 3, borderRadius: 999, background: 'rgba(0,229,255,0.06)' }}>
+                    <motion.div style={{ height: '100%', borderRadius: 999, background: `linear-gradient(90deg, ${lvl.color}80, ${lvl.color})`, width: 0, boxShadow: `0 0 6px ${lvl.color}60` }}
+                      animate={{ width: `${pct}%` }} transition={{ delay: 0.5, duration: 1, ease: 'easeOut' }} />
                   </div>
                 </div>
               )
             })}
           </div>
-          <div className="mt-4 p-3 rounded-xl text-xs" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <p className="font-medium text-indigo-400 mb-1">⚕️ Health Advisory</p>
-            <p style={{ color: 'var(--text-muted)' }}>Delhi air quality is Poor. Avoid outdoor activities. Wear N95 mask if going out.</p>
+          <div style={{ marginTop: 16, padding: '10px 12px', borderRadius: 12, background: 'rgba(123,97,255,0.08)', border: '1px solid rgba(123,97,255,0.15)' }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#7B61FF', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Shield size={11} /> Health Advisory
+            </p>
+            <p style={{ fontSize: 11, color: '#8BAFD4', lineHeight: 1.6 }}>Delhi AQI is Poor. Avoid outdoor activities. Wear N95 mask if going out.</p>
           </div>
         </motion.div>
       </div>

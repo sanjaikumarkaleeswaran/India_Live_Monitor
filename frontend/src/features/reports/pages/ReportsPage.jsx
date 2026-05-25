@@ -113,7 +113,7 @@ const ReportsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <motion.div className="flex justify-between items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div>
@@ -140,20 +140,20 @@ const ReportsPage = () => {
           <SkeletonCard />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
+          <div className="lg:col-span-2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <h3 className="font-bold text-base text-white">Active Crowd Reports</h3>
             {reports.length === 0 ? (
               <div className="glass-card p-8 text-center text-slate-400">
                 No active reports filed. Be the first to file one!
               </div>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {reports.map((r) => (
                   <motion.div
                     key={r.id}
-                    className="glass-card p-5 space-y-3 border"
-                    style={{ borderColor: 'var(--border-subtle)' }}
+                    className="glass-card p-5 border"
+                    style={{ borderColor: 'var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}
                     layout
                   >
                     <div className="flex justify-between items-start gap-4">
@@ -201,7 +201,7 @@ const ReportsPage = () => {
           </div>
 
           {/* Informative Side Panel */}
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="glass-card p-4 text-xs" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
               <h4 className="font-bold text-indigo-400 flex items-center gap-1.5"><AlertCircle size={14} /> Verification Protocol</h4>
               <p className="mt-2 text-slate-300 leading-relaxed">

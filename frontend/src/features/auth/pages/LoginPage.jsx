@@ -39,13 +39,13 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-base)' }}>
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #f97316, transparent)' }} />
+          style={{ background: 'radial-gradient(circle, #00E5FF, transparent)' }} />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #10b981, transparent)' }} />
+          style={{ background: 'radial-gradient(circle, #7B61FF, transparent)' }} />
       </div>
 
       <motion.div
@@ -57,31 +57,37 @@ const LoginPage = () => {
         {/* Logo / Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: 'linear-gradient(135deg, #f97316, #10b981)' }}>
-            <Activity size={28} className="text-white" />
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(0,229,255,0.2), rgba(123,97,255,0.2))',
+              border: '1px solid rgba(0,229,255,0.3)',
+              boxShadow: '0 0 20px rgba(0,229,255,0.15)'
+            }}>
+            <Activity size={28} style={{ color: '#00E5FF' }} />
           </div>
-          <h1 className="text-2xl font-bold gradient-text">Smart India Live Monitor</h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            India's Unified Civic Intelligence Platform
+          <h1 className="text-2xl font-bold" style={{ color: '#E8F4FD', letterSpacing: '-0.02em' }}>
+            SILM <span style={{ color: '#00E5FF', textShadow: '0 0 12px rgba(0,229,255,0.5)' }}>Command</span>
+          </h1>
+          <p className="mt-1 text-sm font-semibold tracking-widest uppercase" style={{ color: '#4A6B8A', fontSize: 10 }}>
+            India's Unified Civic Intelligence
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-card p-8">
+        <div className="glass-card" style={{ padding: 32 }}>
           <div className="mb-6">
-            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              Welcome back
+            <h2 className="text-xl font-bold" style={{ color: '#E8F4FD' }}>
+              Authentication
             </h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              Sign in to access the live monitoring dashboard
+            <p className="text-sm mt-1" style={{ color: '#8BAFD4' }}>
+              Secure access to the national monitoring grid
             </p>
           </div>
 
           {/* Server Error */}
           {error && (
             <motion.div
-              className="mb-4 p-3 rounded-xl text-sm text-red-400 border"
-              style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' }}
+              className="mb-4 p-3 rounded-xl text-sm border"
+              style={{ background: 'rgba(255,61,90,0.08)', borderColor: 'rgba(255,61,90,0.2)', color: '#FF8099' }}
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
             >
@@ -92,12 +98,12 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                Email Address
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: '#4A6B8A' }}>
+                Operator ID (Email)
               </label>
               <div className="relative">
                 <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--text-muted)' }} />
+                  style={{ color: '#8BAFD4' }} />
                 <input
                   id="login-email"
                   name="email"
@@ -105,28 +111,29 @@ const LoginPage = () => {
                   autoComplete="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="you@example.com"
-                  className={`input-field pl-11 ${errors.email ? 'error' : ''}`}
+                  placeholder="operator@silm.in"
+                  className={`input-field pl-11 ${errors.email ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+                  style={{ background: 'rgba(4,8,15,0.6)' }}
                 />
               </div>
               {errors.email && (
-                <p className="mt-1 text-xs text-red-400">{errors.email}</p>
+                <p className="mt-1 text-xs" style={{ color: '#FF8099' }}>{errors.email}</p>
               )}
             </div>
 
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Password
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: '#4A6B8A' }}>
+                  Passkey
                 </label>
-                <Link href="/forgot-password" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
-                  Forgot password?
+                <Link href="/forgot-password" style={{ fontSize: 11, color: '#00E5FF', textDecoration: 'none' }}>
+                  Reset link
                 </Link>
               </div>
               <div className="relative">
                 <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--text-muted)' }} />
+                  style={{ color: '#8BAFD4' }} />
                 <input
                   id="login-password"
                   name="password"
@@ -135,12 +142,13 @@ const LoginPage = () => {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className={`input-field pl-11 pr-11 ${errors.password ? 'error' : ''}`}
+                  className={`input-field pl-11 pr-11 ${errors.password ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+                  style={{ background: 'rgba(4,8,15,0.6)' }}
                 />
                 <button
                   type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--text-muted)' }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
+                  style={{ color: '#8BAFD4', background: 'transparent', border: 'none' }}
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
@@ -148,35 +156,25 @@ const LoginPage = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-400">{errors.password}</p>
+                <p className="mt-1 text-xs" style={{ color: '#FF8099' }}>{errors.password}</p>
               )}
             </div>
 
             {/* Submit */}
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              fullWidth
-              isLoading={isLoading}
-              icon={ArrowRight}
-              iconPosition="right"
-              className="mt-2"
+              disabled={isLoading}
+              className="btn btn-primary w-full mt-6 flex justify-center py-2.5"
             >
-              Sign In
-            </Button>
+              {isLoading ? 'Authenticating...' : 'Initialize Session'} <ArrowRight size={16} />
+            </button>
           </form>
 
-          {/* Demo credentials hint */}
-          <div className="mt-4 p-3 rounded-xl text-xs text-center"
-            style={{ background: 'rgba(99,102,241,0.08)', color: 'var(--text-muted)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            🧪 <strong style={{ color: 'var(--text-secondary)' }}>Demo:</strong> admin@silm.in / Admin@123
-          </div>
-
           {/* Register link */}
-          <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-            Don't have an account?{' '}
-            <Link href="/register" className="font-semibold text-orange-400 hover:text-orange-300 transition-colors">
-              Create one free
+          <p className="mt-6 text-center text-sm" style={{ color: '#8BAFD4' }}>
+            Unregistered operator?{' '}
+            <Link href="/register" style={{ fontWeight: 600, color: '#00E5FF', textDecoration: 'none' }}>
+              Request Access
             </Link>
           </p>
         </div>

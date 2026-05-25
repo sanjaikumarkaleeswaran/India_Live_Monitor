@@ -37,7 +37,7 @@ const SafetyPage = () => {
   const stat = SAFETY_STATS[selectedCity] || SAFETY_STATS.Delhi
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <motion.div className="flex justify-between items-center flex-wrap gap-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -68,7 +68,7 @@ const SafetyPage = () => {
       </motion.div>
 
       {/* Safety Index Overview Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4" style={{ gap: 16 }}>
         <motion.div className="glass-card p-4 flex flex-col justify-between" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
           <Shield className="text-orange-400" size={20} />
           <div className="mt-4">
@@ -105,16 +105,16 @@ const SafetyPage = () => {
       </div>
 
       {/* Safety Route Analyzer Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <motion.div className="glass-card p-5 lg:col-span-2 space-y-4"
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
+        <motion.div className="glass-card p-5 lg:col-span-2" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <h3 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
             <Navigation size={18} className="text-orange-400" />
             Well-Lit Route Safety Check
           </h3>
 
-          <form onSubmit={handleRouteCheck} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleRouteCheck} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
               <div>
                 <label className="text-xs text-muted block mb-1">Starting Point</label>
                 <input
@@ -170,7 +170,7 @@ const SafetyPage = () => {
           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <div>
             <h3 className="font-bold text-lg mb-3" style={{ color: 'var(--text-primary)' }}>Quick safety lines</h3>
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <a href="tel:1091" className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-colors border" style={{ borderColor: 'var(--border-subtle)' }}>
                 <div>
                   <p className="text-xs font-semibold text-slate-400">Women Safety</p>

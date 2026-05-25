@@ -59,7 +59,7 @@ const AQIPage = () => {
   const advisory = getHealthAdvisories(aqiVal)
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <motion.div className="flex justify-between items-center flex-wrap gap-4"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -90,7 +90,7 @@ const AQIPage = () => {
       </motion.div>
 
       {/* Main AQI Meter */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
         <motion.div className="glass-card p-6 flex flex-col justify-between"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div>
@@ -113,7 +113,7 @@ const AQIPage = () => {
         </motion.div>
 
         {/* Pollutants Breakdown Grid */}
-        <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-2" style={{ gap: 16 }}>
           <motion.div className="glass-card p-4 flex flex-col justify-between" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <span className="text-xs font-semibold text-slate-400">PM2.5 (Fine Dust)</span>
             <div>
@@ -149,7 +149,7 @@ const AQIPage = () => {
       </div>
 
       {/* Advisory & Recommendations */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 24 }}>
         <motion.div className="glass-card p-5 lg:col-span-2"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <div className="flex items-center gap-2 mb-3">

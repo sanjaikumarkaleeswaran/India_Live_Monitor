@@ -20,13 +20,15 @@ import { getAQI } from '../../aqi/services/aqiService'
 
 
 // ── Stat Card (SILM) ─────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, sub, color, trend, delay = 0 }) => (
-  <motion.div
+const StatCard = ({ icon: Icon, label, value, sub, color, trend, delay = 0, href }) => (
+  <motion.a
+    href={href}
     initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay, duration: 0.4, ease: 'easeOut' }}
     whileHover={{ y: -2, boxShadow: `0 0 28px ${color}22, 0 4px 24px rgba(0,0,0,0.8)` }}
     style={{
+      textDecoration: 'none',
       background: 'rgba(10,22,40,0.85)',
       border: `1px solid ${color}22`,
       borderRadius: 20, padding: 20,
@@ -53,7 +55,7 @@ const StatCard = ({ icon: Icon, label, value, sub, color, trend, delay = 0 }) =>
       <p style={{ fontSize: 26, fontWeight: 800, color: '#E8F4FD', letterSpacing: '-0.02em', lineHeight: 1, fontFamily: 'JetBrains Mono, monospace' }}>{value}</p>
       {sub && <p style={{ fontSize: 11, color: '#4A6B8A', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>}
     </div>
-  </motion.div>
+  </motion.a>
 )
 
 // ── Alert Row (SILM) ─────────────────────────────────────────
@@ -149,10 +151,10 @@ const DashboardPage = () => {
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        <StatCard icon={Fuel} label="Avg. Petrol Price" value={`₹${avgPetrol.toFixed(2)}`} sub="National average today" color="#FFB830" trend={0.00} delay={0.05} />
-        <StatCard icon={Thermometer} label={`${defaultCity} Temperature`} value={`${currentTemp}°C`} sub={`Feels like ${currentFeelsLike}°C`} color="#7B61FF" delay={0.1} />
-        <StatCard icon={Wind} label="Avg. National AQI" value={avgAQI} sub={aqiLevel.label} color="#00E5FF" delay={0.15} />
-        <StatCard icon={Siren} label="Active Alerts" value={alerts.length} sub={`${alerts.filter(a => a.severity === 'critical').length} critical`} color="#FF3D5A" delay={0.2} />
+        <StatCard href="/fuel" icon={Fuel} label="Avg. Petrol Price" value={`₹${avgPetrol.toFixed(2)}`} sub="National average today" color="#FFB830" trend={0.00} delay={0.05} />
+        <StatCard href="/weather" icon={Thermometer} label={`${defaultCity} Temperature`} value={`${currentTemp}°C`} sub={`Feels like ${currentFeelsLike}°C`} color="#7B61FF" delay={0.1} />
+        <StatCard href="/aqi" icon={Wind} label="Avg. National AQI" value={avgAQI} sub={aqiLevel.label} color="#00E5FF" delay={0.15} />
+        <StatCard href="/alerts" icon={Siren} label="Active Alerts" value={alerts.length} sub={`${alerts.filter(a => a.severity === 'critical').length} critical`} color="#FF3D5A" delay={0.2} />
       </div>
 
       {/* Alerts + Emergency */}

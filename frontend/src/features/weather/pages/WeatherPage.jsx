@@ -8,7 +8,7 @@ import {
   Cloud, Thermometer, Droplets, Wind, Search, AlertTriangle,
   Compass, Eye, ArrowUp, Umbrella, Shield
 } from 'lucide-react'
-import { getWeather } from '../services/weatherService'
+import { getWeather, getWeatherForecast } from '../services/weatherService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 import { selectUser } from '../../auth/store/authSlice'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -28,6 +28,13 @@ const WeatherPage = () => {
   const { data: weather, isLoading, error } = useQuery({
     queryKey: ['weather', selectedCity],
     queryFn: () => getWeather(selectedCity),
+  })
+
+  // Fetch 7-day forecast
+  const { data: forecastData } = useQuery({
+    queryKey: ['weatherForecast', selectedCity],
+    queryFn: () => getWeatherForecast(selectedCity),
+    staleTime: 1000 * 60 * 30, // 30 min
   })
 
   if (isLoading) {
@@ -215,8 +222,23 @@ const WeatherPage = () => {
         <motion.div className="glass-card flex flex-col"
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <h3 className="font-semibold text-sm text-slate-100 mb-4">7-Day Forecast</h3>
-          <div className="divide-y divide-white/5 flex-1 flex flex-col overflow-y-auto pr-2 custom-scrollbar">
-            {weather.forecast && weather.forecast.length > 0 ? (
+          <div className="divide-y divide-white/5 flex-1 flex flex-col overflow-y-auto pr-1 custom-scrollbar">
+            {forecastData?.forecast && forecastData.forecast.length > 0 ? (
+              forecastData.forecast.map((fc, index) => (
+                <div key={index} className="flex items-center justify-between py-2.5 gap-2">
+                  <div className="w-10 shrink-0">
+                    <p className="font-bold text-xs text-slate-200">{fc.day}</p>
+                    <p className="text-[10px] text-slate-500">{fc.date}</p>
+                  </div>
+                  <span className="text-base">{typeof fc.icon === 'string' && fc.icon.startsWith('http') ? '⛅' : (fc.icon || '⛅')}</span>
+                  <span className="text-[10px] text-slate-400 flex-1 text-center truncate">{fc.condition}</span>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-xs text-slate-100">{fc.tempMax ?? fc.temp}°</p>
+                    <p className="text-[10px] text-slate-500">{fc.tempMin ?? fc.temp - 4}°</p>
+                  </div>
+                </div>
+              ))
+            ) : weather?.forecast && weather.forecast.length > 0 ? (
               weather.forecast.map((fc, index) => (
                 <div key={index} className="flex items-center justify-between py-2.5">
                   <span className="font-medium text-sm text-slate-300 w-10">{fc.day}</span>

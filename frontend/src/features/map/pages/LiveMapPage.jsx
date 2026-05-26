@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
-import { Siren, Hospital, ShieldAlert, Crosshair, HelpCircle, Layers, ZoomIn } from 'lucide-react'
+import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON } from 'react-leaflet'
+import { Siren, Hospital, ShieldAlert, Crosshair, HelpCircle, Layers, ZoomIn, Wind } from 'lucide-react'
 import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
@@ -48,11 +48,26 @@ const severityColors = {
 
 const LiveMapPage = () => {
   const [filter, setFilter] = useState('all') // 'all', 'alerts', 'hospitals', 'police'
+  const [showBoundaries, setShowBoundaries] = useState(true)
+  const [showHeatmap, setShowHeatmap] = useState(false)
+  const [indiaGeoJSON, setIndiaGeoJSON] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
   const user = useSelector(selectUser)
   
   const defaultCenter = user?.location?.coordinates ? [user.location.coordinates[1], user.location.coordinates[0]] : INDIA_CENTER
   const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
+
+  // Fetch India state boundaries GeoJSON from CDN
+  useEffect(() => {
+    fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_telengana.geojson')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setIndiaGeoJSON(data)
+      })
+      .catch(() => {
+        // Silently fail — map works without boundaries
+      })
+  }, [])
 
   // Fetch live alerts
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
@@ -85,6 +100,19 @@ const LiveMapPage = () => {
   const displayedCenters = filter === 'all'
     ? safetyCenters
     : safetyCenters.filter(c => c.type === filter)
+
+  // AQI heatmap data points [lat, lng, intensity]
+  const heatmapPoints = [
+    [28.6139, 77.2090, 0.9],   // Delhi - Very Poor
+    [19.0760, 72.8777, 0.5],   // Mumbai - Moderate
+    [13.0827, 80.2707, 0.3],   // Chennai - Satisfactory
+    [22.5726, 88.3639, 0.6],   // Kolkata - Poor
+    [12.9716, 77.5946, 0.35],  // Bengaluru - Moderate
+    [17.3850, 78.4867, 0.45],  // Hyderabad - Moderate
+    [23.0225, 72.5714, 0.4],   // Ahmedabad
+    [26.9124, 75.7873, 0.55],  // Jaipur
+    [18.5204, 73.8567, 0.45],  // Pune
+  ]
 
   // Recenter to India helper
   const handleRecenter = () => {
@@ -197,6 +225,35 @@ const LiveMapPage = () => {
               </button>
             </div>
 
+            {/* Overlay Toggles */}
+            <div className="pt-4 border-t border-white/5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p className="text-[10px] uppercase font-bold tracking-wider text-muted">Map Overlays</p>
+              <button
+                onClick={() => setShowBoundaries(b => !b)}
+                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
+                style={{
+                  background: showBoundaries ? 'rgba(123,97,255,0.1)' : 'transparent',
+                  border: `1px solid ${showBoundaries ? 'rgba(123,97,255,0.3)' : 'var(--border-subtle)'}`,
+                  color: showBoundaries ? '#7b61ff' : 'var(--text-secondary)'
+                }}
+              >
+                <span className="flex items-center gap-2"><Layers size={12} /> State Boundaries</span>
+                <span className="text-[10px]">{showBoundaries ? 'ON' : 'OFF'}</span>
+              </button>
+              <button
+                onClick={() => setShowHeatmap(h => !h)}
+                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
+                style={{
+                  background: showHeatmap ? 'rgba(239,68,68,0.1)' : 'transparent',
+                  border: `1px solid ${showHeatmap ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
+                  color: showHeatmap ? '#ef4444' : 'var(--text-secondary)'
+                }}
+              >
+                <span className="flex items-center gap-2"><Wind size={12} /> AQI Heatmap</span>
+                <span className="text-[10px]">{showHeatmap ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
             {/* Severity Legend */}
             <div className="pt-4 border-t border-white/5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p className="text-[10px] uppercase font-bold tracking-wider text-muted">Alert Risk Levels</p>
@@ -231,6 +288,35 @@ const LiveMapPage = () => {
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             />
+
+            {/* India State Boundaries GeoJSON */}
+            {showBoundaries && indiaGeoJSON && (
+              <GeoJSON
+                data={indiaGeoJSON}
+                style={{
+                  color: '#00E5FF',
+                  weight: 1,
+                  opacity: 0.4,
+                  fillColor: '#00E5FF',
+                  fillOpacity: 0.03,
+                }}
+              />
+            )}
+
+            {/* AQI Heatmap — render circles per major city */}
+            {showHeatmap && heatmapPoints.map(([lat, lng, intensity], idx) => (
+              <Circle
+                key={`heat-${idx}`}
+                center={[lat, lng]}
+                radius={80000}
+                pathOptions={{
+                  fillColor: intensity > 0.7 ? '#ef4444' : intensity > 0.5 ? '#f59e0b' : '#10b981',
+                  fillOpacity: intensity * 0.35,
+                  color: 'transparent',
+                  weight: 0,
+                }}
+              />
+            ))}
 
             {/* Render Danger circles & labels for active alerts */}
             {displayedAlerts.map((a) => {

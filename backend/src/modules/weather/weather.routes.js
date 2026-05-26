@@ -2,6 +2,7 @@ const express = require('express')
 const axios = require('axios')
 const { asyncWrapper } = require('../../middleware/errorHandler')
 const ApiResponse = require('../../utils/apiResponse')
+const WeatherCache = require('../../models/WeatherCache.model')
 
 const router = express.Router()
 
@@ -55,23 +56,38 @@ router.get('/', asyncWrapper(async (req, res) => {
   }
 
   try {
+    // ── 1. Check MongoDB cache first ──────────────────────────
+    const cached = await WeatherCache.findOne({ city })
+    if (cached) {
+      return ApiResponse.success(res, {
+        message: 'Weather data from cache',
+        data: { ...cached.data, source: 'cache' },
+      })
+    }
+
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city},IN&units=metric&appid=${apiKey}`
     const response = await axios.get(url)
     const { main, weather, wind, name } = response.data
 
-    return ApiResponse.success(res, {
-      message: 'Weather data fetched successfully',
-      data: {
-        city: name,
-        temp: main.temp,
-        feelsLike: main.feels_like,
-        humidity: main.humidity,
-        windSpeed: wind.speed,
-        condition: weather[0].description,
-        icon: weather[0].icon,
-        source: 'openweathermap',
-      },
-    })
+    const weatherData = {
+      city: name,
+      temp: main.temp,
+      feelsLike: main.feels_like,
+      humidity: main.humidity,
+      windSpeed: Math.round(wind.speed * 3.6),
+      condition: weather[0].description,
+      icon: weather[0].icon,
+      source: 'openweathermap',
+    }
+
+    // Save to cache (upsert)
+    await WeatherCache.findOneAndUpdate(
+      { city },
+      { data: weatherData, fetchedAt: new Date() },
+      { upsert: true, new: true }
+    )
+
+    return ApiResponse.success(res, { message: 'Weather data fetched successfully', data: weatherData })
   } catch (error) {
     // Fallback if OpenWeather errors out
     const mock = MOCK_WEATHER_DATA[city] || MOCK_WEATHER_DATA.DELHI
@@ -83,6 +99,74 @@ router.get('/', asyncWrapper(async (req, res) => {
         forecast: [],
         source: 'fallback',
       },
+    })
+  }
+}))
+
+/**
+ * GET /api/v1/weather/forecast
+ * Get 5-day / 3-hour forecast for a city (OpenWeather)
+ */
+router.get('/forecast', asyncWrapper(async (req, res) => {
+  const city = (req.query.city || 'Delhi').toUpperCase()
+  const apiKey = process.env.OPENWEATHER_API_KEY
+
+  const generateMockForecast = (baseTemp) => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const conditions = ['Clear', 'Partly Cloudy', 'Thunderstorm', 'Haze', 'Light Rain']
+    return days.map((day, i) => ({
+      day,
+      date: new Date(Date.now() + i * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      temp: Math.round(baseTemp + (Math.random() * 4 - 2)),
+      tempMin: Math.round(baseTemp - 4 + (Math.random() * 2)),
+      tempMax: Math.round(baseTemp + 3 + (Math.random() * 2)),
+      condition: conditions[Math.floor(Math.random() * conditions.length)],
+      humidity: Math.round(40 + Math.random() * 40),
+      windSpeed: Math.round(10 + Math.random() * 20),
+      icon: '⛅',
+    }))
+  }
+
+  if (!apiKey || apiKey.startsWith('your_')) {
+    const mock = MOCK_WEATHER_DATA[city] || MOCK_WEATHER_DATA.DELHI
+    return ApiResponse.success(res, {
+      data: { city, forecast: generateMockForecast(mock.temp), source: 'mock' }
+    })
+  }
+
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city},IN&units=metric&cnt=40&appid=${apiKey}`
+    const response = await axios.get(url)
+    const list = response.data.list
+
+    // Group by day (pick noon reading per day)
+    const dayMap = {}
+    list.forEach(entry => {
+      const date = new Date(entry.dt * 1000)
+      const dayKey = date.toLocaleDateString('en-IN', { weekday: 'short' })
+      const hour = date.getHours()
+      if (!dayMap[dayKey] || Math.abs(hour - 12) < Math.abs(new Date(dayMap[dayKey].dt * 1000).getHours() - 12)) {
+        dayMap[dayKey] = entry
+      }
+    })
+
+    const forecast = Object.entries(dayMap).slice(0, 7).map(([day, entry]) => ({
+      day,
+      date: new Date(entry.dt * 1000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      temp: Math.round(entry.main.temp),
+      tempMin: Math.round(entry.main.temp_min),
+      tempMax: Math.round(entry.main.temp_max),
+      condition: entry.weather[0].description,
+      humidity: entry.main.humidity,
+      windSpeed: Math.round(entry.wind.speed * 3.6), // m/s to km/h
+      icon: entry.weather[0].icon,
+    }))
+
+    return ApiResponse.success(res, { data: { city, forecast, source: 'openweathermap' } })
+  } catch (error) {
+    const mock = MOCK_WEATHER_DATA[city] || MOCK_WEATHER_DATA.DELHI
+    return ApiResponse.success(res, {
+      data: { city, forecast: generateMockForecast(mock.temp), source: 'fallback' }
     })
   }
 }))

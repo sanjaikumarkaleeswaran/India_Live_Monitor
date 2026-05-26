@@ -7,14 +7,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Map, Fuel, Cloud, Wind, Siren,
   Shield, FileText, Settings2, LogOut, ChevronLeft,
-  Activity, X, Cpu, AlertTriangle,
+  Activity, X, Cpu, AlertTriangle, User,
 } from 'lucide-react'
 import { toggleSidebar, setSidebarMobileOpen } from '../../app/uiSlice'
 import { logoutUser } from '../../features/auth/store/authSlice'
 import { selectUser, selectIsAdmin } from '../../features/auth/store/authSlice'
 import toast from 'react-hot-toast'
 
-const iconMap = { LayoutDashboard, Map, Fuel, Cloud, Wind, Siren, Shield, FileText, Settings2, Activity }
+const iconMap = { LayoutDashboard, Map, Fuel, Cloud, Wind, Siren, Shield, FileText, Settings2, Activity, User }
 
 const navLinks = [
   { path: '/dashboard',  label: 'Dashboard',     icon: 'LayoutDashboard', color: '#00E5FF' },
@@ -26,6 +26,7 @@ const navLinks = [
   { path: '/safety',     label: 'Safety',         icon: 'Shield',          color: '#00E5FF' },
   { path: '/reports',    label: 'Reports',        icon: 'FileText',        color: '#FFB830' },
   { path: '/alerts',     label: 'Alerts',         icon: 'Activity',        color: '#FF3D5A' },
+  { path: '/profile',    label: 'My Profile',     icon: 'User',            color: '#7B61FF' },
 ]
 
 const adminLinks = [

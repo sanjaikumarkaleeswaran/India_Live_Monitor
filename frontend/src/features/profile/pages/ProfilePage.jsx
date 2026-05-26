@@ -3,10 +3,18 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, MapPin, Shield, CheckCircle, Bell, Globe } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Shield, CheckCircle, Bell, Globe, AlertCircle } from 'lucide-react'
 import { selectUser, updateUserLocally } from '../../auth/store/authSlice'
 import { updateProfile } from '../services/profileService'
 import toast from 'react-hot-toast'
+
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+  'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+  'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand',
+  'West Bengal', 'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Puducherry', 'Chandigarh'
+]
 
 const ProfilePage = () => {
   const dispatch = useDispatch()
@@ -26,15 +34,23 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name || !form.phone) {
-      return toast.error('Please enter name and phone number')
+    if (!form.name) {
+      return toast.error('Please enter your name')
     }
 
     try {
       setUpdating(true)
-      const data = await updateProfile(form)
-      dispatch(updateUserLocally(data.user))
-      toast.success('Profile details updated successfully')
+      const response = await updateProfile({
+        name: form.name,
+        phone: form.phone,
+        state: form.state,
+        city: form.city,
+        preferences: form.preferences
+      })
+      // response shape: { success, message, data: { user } }
+      const updatedUser = response?.data?.user || response?.user
+      if (updatedUser) dispatch(updateUserLocally(updatedUser))
+      toast.success('Profile updated successfully!')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update profile')
     } finally {
@@ -51,6 +67,19 @@ const ProfilePage = () => {
           Manage your personal details, location tracking preferences, and alert notifications.
         </p>
       </motion.div>
+
+      {/* Incomplete profile warning */}
+      {(!user?.state || !user?.city) && (
+        <motion.div
+          className="p-3 rounded-xl flex items-center gap-3 border border-amber-500/20 bg-amber-500/5"
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+        >
+          <AlertCircle size={16} className="text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-300">
+            <span className="font-bold">Profile incomplete.</span> Add your state and city to receive personalised alerts, local fuel prices, and weather data.
+          </p>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card Overview */}
@@ -86,8 +115,10 @@ const ProfilePage = () => {
           </div>
 
           <div className="w-full pt-6 mt-6 border-t text-left text-xs text-slate-400 space-y-2" style={{ borderColor: 'var(--border-subtle)' }}>
-            <div className="flex justify-between"><span>User level:</span><span className="text-white font-bold">{user?.role?.toUpperCase()}</span></div>
+            <div className="flex justify-between"><span>Role:</span><span className="text-white font-bold">{user?.role?.toUpperCase()}</span></div>
+            <div className="flex justify-between"><span>Location:</span><span className="text-white font-bold">{user?.city && user?.state ? `${user.city}, ${user.state}` : <span className="text-amber-400">Not set</span>}</span></div>
             <div className="flex justify-between"><span>Account ID:</span><span className="text-slate-500 font-mono">{user?._id?.substring(0, 12)}...</span></div>
+            <div className="flex justify-between"><span>Email Verified:</span><span className={user?.isEmailVerified ? 'text-emerald-400' : 'text-amber-400'}>{user?.isEmailVerified ? '✓ Verified' : '✗ Pending'}</span></div>
           </div>
         </motion.div>
 
@@ -127,15 +158,18 @@ const ProfilePage = () => {
               </div>
 
               <div>
-                <label className="text-xs text-muted block mb-1">State / UT</label>
-                <input
-                  type="text"
+                <label className="text-xs text-slate-400 block mb-1 font-medium">State / UT</label>
+                <select
                   value={form.state}
                   onChange={(e) => setForm({ ...form, state: e.target.value })}
-                  placeholder="e.g. Tamil Nadu"
                   className="w-full p-2.5 rounded-xl text-sm"
                   style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-                />
+                >
+                  <option value="">Select state...</option>
+                  {INDIAN_STATES.sort().map(s => (
+                    <option key={s} value={s} style={{ background: '#0a0f1a' }}>{s}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

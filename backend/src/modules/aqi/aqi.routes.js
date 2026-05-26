@@ -2,6 +2,7 @@ const express = require('express')
 const axios = require('axios')
 const { asyncWrapper } = require('../../middleware/errorHandler')
 const ApiResponse = require('../../utils/apiResponse')
+const AQICache = require('../../models/AQICache.model')
 
 const router = express.Router()
 
@@ -38,6 +39,15 @@ router.get('/', asyncWrapper(async (req, res) => {
   }
 
   try {
+    // ── 1. Check MongoDB AQI cache first ───────────────────────
+    const cached = await AQICache.findOne({ city })
+    if (cached) {
+      return ApiResponse.success(res, {
+        message: 'AQI data from cache',
+        data: { ...cached.data, source: 'cache' },
+      })
+    }
+
     const url = `https://api.waqi.info/feed/${city}/?token=${token}`
     const response = await axios.get(url)
     const result = response.data
@@ -56,19 +66,28 @@ router.get('/', asyncWrapper(async (req, res) => {
     if (aqi > 300) category = 'Very Poor'
     if (aqi > 400) category = 'Severe'
 
+    const aqiData = {
+      city,
+      aqi,
+      category,
+      pm25: iaqi.pm25?.v || null,
+      pm10: iaqi.pm10?.v || null,
+      o3:   iaqi.o3?.v   || null,
+      no2:  iaqi.no2?.v  || null,
+      time: time.s,
+      source: 'aqicn',
+    }
+
+    // Save to AQI cache (upsert)
+    await AQICache.findOneAndUpdate(
+      { city },
+      { data: aqiData, fetchedAt: new Date() },
+      { upsert: true, new: true }
+    )
+
     return ApiResponse.success(res, {
       message: 'AQI data fetched successfully',
-      data: {
-        city,
-        aqi,
-        category,
-        pm25: iaqi.pm25?.v || null,
-        pm10: iaqi.pm10?.v || null,
-        o3:   iaqi.o3?.v   || null,
-        no2:  iaqi.no2?.v  || null,
-        time: time.s,
-        source: 'aqicn',
-      },
+      data: aqiData,
     })
   } catch (error) {
     const mock = MOCK_AQI_DATA[city] || MOCK_AQI_DATA.DELHI

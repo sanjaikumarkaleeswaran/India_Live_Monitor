@@ -114,7 +114,7 @@ router.get('/forecast', asyncWrapper(async (req, res) => {
   const generateMockForecast = (baseTemp) => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     const conditions = ['Clear', 'Partly Cloudy', 'Thunderstorm', 'Haze', 'Light Rain']
-    return days.map((day, i) => ({
+    const forecast = days.map((day, i) => ({
       day,
       date: new Date(Date.now() + i * 86400000).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
       temp: Math.round(baseTemp + (Math.random() * 4 - 2)),
@@ -123,14 +123,22 @@ router.get('/forecast', asyncWrapper(async (req, res) => {
       condition: conditions[Math.floor(Math.random() * conditions.length)],
       humidity: Math.round(40 + Math.random() * 40),
       windSpeed: Math.round(10 + Math.random() * 20),
-      icon: '⛅',
+      icon: '01d',
     }))
+
+    const hourlyForecast = Array.from({ length: 8 }).map((_, i) => ({
+      time: new Date(Date.now() + i * 10800000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      temp: Math.round(baseTemp + (Math.random() * 4 - 2)),
+    }))
+
+    return { forecast, hourlyForecast }
   }
 
   if (!apiKey || apiKey.startsWith('your_')) {
     const mock = MOCK_WEATHER_DATA[city] || MOCK_WEATHER_DATA.DELHI
+    const mockData = generateMockForecast(mock.temp)
     return ApiResponse.success(res, {
-      data: { city, forecast: generateMockForecast(mock.temp), source: 'mock' }
+      data: { city, forecast: mockData.forecast, hourlyForecast: mockData.hourlyForecast, source: 'mock' }
     })
   }
 
@@ -162,7 +170,14 @@ router.get('/forecast', asyncWrapper(async (req, res) => {
       icon: entry.weather[0].icon,
     }))
 
-    return ApiResponse.success(res, { data: { city, forecast, source: 'openweathermap' } })
+    // Extract first 8 items for 24-hour hourly trend
+    const hourlyForecast = list.slice(0, 8).map(entry => ({
+      time: new Date(entry.dt * 1000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      temp: Math.round(entry.main.temp),
+      icon: entry.weather[0].icon,
+    }))
+
+    return ApiResponse.success(res, { data: { city, forecast, hourlyForecast, source: 'openweathermap' } })
   } catch (error) {
     const mock = MOCK_WEATHER_DATA[city] || MOCK_WEATHER_DATA.DELHI
     return ApiResponse.success(res, {

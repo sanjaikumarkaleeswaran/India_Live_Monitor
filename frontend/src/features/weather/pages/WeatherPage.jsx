@@ -15,6 +15,23 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 const DEFAULT_CITIES = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru', 'Hyderabad']
 
+// Convert OpenWeather icon code to emoji
+const iconToEmoji = (icon) => {
+  if (!icon) return '🌤️'
+  const map = {
+    '01d': '☀️',  '01n': '🌕',
+    '02d': '🌤️', '02n': '🌤️',
+    '03d': '🌥️', '03n': '🌥️',
+    '04d': '☁️',  '04n': '☁️',
+    '09d': '🌧️', '09n': '🌧️',
+    '10d': '🌦️', '10n': '🌦️',
+    '11d': '⛈️',  '11n': '⛈️',
+    '13d': '❄️',  '13n': '❄️',
+    '50d': '🌫️', '50n': '🌫️',
+  }
+  return map[icon] || '🌤️'
+}
+
 const WeatherPage = () => {
   const user = useSelector(selectUser)
   const userCity = user?.city
@@ -139,7 +156,7 @@ const WeatherPage = () => {
 
           <div className="flex items-end justify-between mt-6">
             <span className="text-5xl font-black text-slate-100 tracking-tighter">{Math.round(weather.temp)}°C</span>
-            <span className="text-5xl opacity-90">{weather.icon || '☀️'}</span>
+            <span className="text-5xl opacity-90">{iconToEmoji(weather.icon)}</span>
           </div>
         </motion.div>
 
@@ -193,26 +210,56 @@ const WeatherPage = () => {
         {/* Hourly Trend Chart */}
         <motion.div className="glass-card flex flex-col lg:col-span-2"
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <h3 className="font-semibold text-sm text-slate-100 mb-4">Today's Temperature Trend</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-sm text-slate-100">24-Hour Temperature Trend</h3>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">{selectedCity}</span>
+          </div>
           <div className="h-48 mt-2 flex-1">
-            {weather.hourlyForecast && weather.hourlyForecast.length > 0 ? (
+            {forecastData?.hourlyForecast && forecastData.hourlyForecast.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weather.hourlyForecast} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={forecastData.hourlyForecast} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="time" stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis domain={['dataMin - 2', 'dataMax + 2']} stroke="#71717a" fontSize={11} tickLine={false} axisLine={false} hide />
-                  <Tooltip contentStyle={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="temp" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorTemp)" />
+                  <XAxis
+                    dataKey="time"
+                    stroke="#4A6B8A"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={1}
+                  />
+                  <YAxis
+                    domain={['dataMin - 2', 'dataMax + 2']}
+                    stroke="#4A6B8A"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v}°`}
+                    width={28}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: '#0a0f1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontSize: '12px' }}
+                    formatter={(v) => [`${v}°C`, 'Temp']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="temp"
+                    stroke="#f59e0b"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorTemp)"
+                    dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: '#f59e0b' }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex-1 h-full flex items-center justify-center p-4 border border-dashed border-white/10 rounded-lg">
-                <p className="text-sm text-slate-500">Hourly data temporarily unavailable.</p>
+                <p className="text-sm text-slate-500">Loading hourly forecast…</p>
               </div>
             )}
           </div>
@@ -230,7 +277,7 @@ const WeatherPage = () => {
                     <p className="font-bold text-xs text-slate-200">{fc.day}</p>
                     <p className="text-[10px] text-slate-500">{fc.date}</p>
                   </div>
-                  <span className="text-base">{typeof fc.icon === 'string' && fc.icon.startsWith('http') ? '⛅' : (fc.icon || '⛅')}</span>
+                  <span className="text-base">{iconToEmoji(fc.icon)}</span>
                   <span className="text-[10px] text-slate-400 flex-1 text-center truncate">{fc.condition}</span>
                   <div className="text-right shrink-0">
                     <p className="font-bold text-xs text-slate-100">{fc.tempMax ?? fc.temp}°</p>

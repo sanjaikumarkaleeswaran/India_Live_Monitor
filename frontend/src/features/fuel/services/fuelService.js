@@ -9,3 +9,8 @@ export const getFuelPriceByState = async (stateCode) => {
   const response = await api.get(`/fuel/${stateCode}`)
   return response.data.data
 }
+
+export const getFuelHistory = async (stateCode) => {
+  const response = await api.get(`/fuel/${stateCode}/history`)
+  return response.data.data
+}

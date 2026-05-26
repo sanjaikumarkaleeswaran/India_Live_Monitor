@@ -38,6 +38,11 @@ const authService = {
     const res = await api.post('/auth/verify-email', { token })
     return res.data
   },
+
+  updateProfile: async (data) => {
+    const res = await api.put('/users/me', data)
+    return res.data
+  },
 }
 
 export default authService

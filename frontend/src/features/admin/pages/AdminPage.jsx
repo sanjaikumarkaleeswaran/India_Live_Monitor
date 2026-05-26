@@ -8,7 +8,7 @@ import {
   PlusCircle, RefreshCw, Trash2, ShieldCheck, UserCheck, AlertTriangle
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getUsers, updateUserRole } from '../services/adminService'
+import { getUsers, updateUserRole, getSystemHealth } from '../services/adminService'
 import { createAlert } from '../../alerts/services/alertService'
 import { getSOSRequests, updateSOSStatus } from '../../emergency/services/emergencyService'
 import { useSocket } from '../../../hooks/useSocket'
@@ -31,6 +31,14 @@ const AdminPage = () => {
     queryKey: ['adminUsers'],
     queryFn: () => getUsers(),
     enabled: activeTab === 'users'
+  })
+
+  // Fetch system health
+  const { data: healthData, isLoading: healthLoading } = useQuery({
+    queryKey: ['systemHealth'],
+    queryFn: getSystemHealth,
+    enabled: activeTab === 'health',
+    refetchInterval: 10000 // refetch every 10 seconds
   })
 
   // Role mutation
@@ -141,12 +149,12 @@ const AdminPage = () => {
     sosStatusMutation.mutate({ id, status: 'Dispatched' })
   }
 
-  const systemHealth = {
-    uptime: '14d 8h 22m',
-    cpu: '18%',
-    ram: '1.2 GB / 4.0 GB',
-    db: 'Connected (Atlas)',
-    ping: '42ms'
+  const systemHealth = healthData?.system || {
+    uptime: 'Loading...',
+    cpu: 'Loading...',
+    ram: 'Loading...',
+    db: 'Loading...',
+    ping: 'Loading...'
   }
 
   return (

@@ -14,6 +14,7 @@ const emergencyRoutes = require('./modules/emergency/emergency.routes')
 const weatherRoutes = require('./modules/weather/weather.routes')
 const aqiRoutes = require('./modules/aqi/aqi.routes')
 const reportRoutes = require('./modules/reports/reports.routes')
+const safetyRoutes = require('./modules/safety/safety.routes')
 const logger = require('./utils/logger')
 
 const app = express()
@@ -72,16 +73,40 @@ if (process.env.NODE_ENV !== 'test') {
   }))
 }
 
+const os = require('os')
+const mongoose = require('mongoose')
+
 // ── Health Check ───────────────────────────────────────────
-app.get('/health', (req, res) => {
+const healthCheckHandler = (req, res) => {
+  const formatUptime = (seconds) => {
+    const d = Math.floor(seconds / (3600 * 24))
+    const h = Math.floor(seconds % (3600 * 24) / 3600)
+    const m = Math.floor(seconds % 3600 / 60)
+    return `${d}d ${h}h ${m}m`
+  }
+
+  const totalMem = os.totalmem()
+  const freeMem = os.freemem()
+  const usedMem = totalMem - freeMem
+
   res.status(200).json({
     status: 'ok',
     app: 'Smart India Live Monitor API',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    system: {
+      uptime: formatUptime(os.uptime()),
+      cpu: os.loadavg()[0].toFixed(2) + '%',
+      ram: `${(usedMem / 1e9).toFixed(2)} GB / ${(totalMem / 1e9).toFixed(2)} GB`,
+      db: mongoose.connection.readyState === 1 ? 'Connected (Atlas)' : 'Disconnected',
+      ping: '12ms' // Mocked ping for simplicity
+    }
   })
-})
+}
+
+app.get('/health', healthCheckHandler)
+app.get('/api/v1/system/health', healthCheckHandler)
 
 // ── API Routes ─────────────────────────────────────────────
 app.use('/api/v1/auth',       authRoutes)
@@ -92,6 +117,7 @@ app.use('/api/v1/emergency',  emergencyRoutes)
 app.use('/api/v1/weather',    weatherRoutes)
 app.use('/api/v1/aqi',        aqiRoutes)
 app.use('/api/v1/reports',    reportRoutes)
+app.use('/api/v1/safety',     safetyRoutes)
 
 // ── 404 Handler ────────────────────────────────────────────
 app.use((req, res) => {

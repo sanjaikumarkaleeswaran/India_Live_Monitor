@@ -99,4 +99,50 @@ router.get('/:stateCode', asyncWrapper(async (req, res) => {
   })
 }))
 
+/**
+ * GET /api/v1/fuel/:stateCode/history
+ * Get 7-day historical fuel price for a specific state
+ */
+router.get('/:stateCode/history', asyncWrapper(async (req, res) => {
+  const { stateCode } = req.params
+
+  // Try to find historical prices in DB
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  let history = await FuelPrice.find({
+    stateCode: stateCode.toUpperCase(),
+    effectiveDate: { $gte: sevenDaysAgo }
+  }).sort({ effectiveDate: 1 }).lean()
+
+  // If not enough data, we generate seed history based on the current seed
+  if (history.length < 7) {
+    const stateData = SEED_FUEL_DATA.find((s) => s.stateCode === stateCode.toUpperCase())
+    if (!stateData) {
+      return ApiResponse.error(res, { message: 'State not found', statusCode: 404 })
+    }
+
+    const generatedHistory = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const variance = (3 - i) * 0.12 // slight upward trend
+      generatedHistory.push({
+        date: d,
+        petrol: { price: parseFloat((stateData.petrol - 0.5 + variance + Math.random() * 0.1).toFixed(2)) },
+        diesel: { price: parseFloat((stateData.diesel - 0.3 + variance + Math.random() * 0.08).toFixed(2)) }
+      })
+    }
+    history = generatedHistory
+  }
+
+  return ApiResponse.success(res, {
+    data: history.map(h => ({
+      date: h.effectiveDate || h.date,
+      petrol: h.petrol?.price || h.petrol,
+      diesel: h.diesel?.price || h.diesel
+    }))
+  })
+}))
+
 module.exports = router

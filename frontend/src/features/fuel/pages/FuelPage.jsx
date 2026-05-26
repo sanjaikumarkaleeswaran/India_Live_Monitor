@@ -8,26 +8,13 @@ import {
   Fuel, Search, ArrowUpDown, TrendingUp, TrendingDown,
   Info, Compass, Award, Lightbulb, MapPin, Check
 } from 'lucide-react'
-import { getFuelPrices } from '../services/fuelService'
+import { getFuelPrices, getFuelHistory } from '../services/fuelService'
 import { SkeletonCard, SkeletonTable } from '../../../components/ui/Skeleton'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import { selectUser } from '../../auth/store/authSlice'
-
-// Generates 7-day mock history data for the chart based on current price
-const generateHistoryData = (petrolPrice, dieselPrice) => {
-  const dates = ['15 May', '16 May', '17 May', '18 May', '19 May', '20 May', '21 May']
-  return dates.map((date, idx) => {
-    const variance = (idx - 3) * 0.12 // slight upward trend
-    return {
-      name: date,
-      Petrol: parseFloat((petrolPrice - 0.5 + variance + Math.random() * 0.1).toFixed(2)),
-      Diesel: parseFloat((dieselPrice - 0.3 + variance + Math.random() * 0.08).toFixed(2)),
-    }
-  })
-}
 
 const FuelPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,6 +28,13 @@ const FuelPage = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['fuelPrices'],
     queryFn: getFuelPrices,
+  })
+
+  // Fetch fuel history for selected state
+  const { data: historyData } = useQuery({
+    queryKey: ['fuelHistory', selectedState1],
+    queryFn: () => getFuelHistory(selectedState1),
+    enabled: !!selectedState1,
   })
 
   // Initialize selectedState1 based on user's state name
@@ -126,10 +120,11 @@ const FuelPage = () => {
   const state1Data = prices.find((p) => p.stateCode === selectedState1) || prices[0]
   const state2Data = prices.find((p) => p.stateCode === selectedState2) || prices[1]
 
-  const chartData = generateHistoryData(
-    state1Data?.petrol?.price || state1Data?.petrol || 95,
-    state1Data?.diesel?.price || state1Data?.diesel || 87
-  )
+  const chartData = historyData ? historyData.map(h => ({
+    name: new Date(h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+    Petrol: h.petrol,
+    Diesel: h.diesel
+  })) : []
 
   const fuelSavingTips = [
     { title: 'Maintain Inflation', desc: 'Keeping tires properly inflated can improve fuel mileage by up to 3%.', icon: Compass },

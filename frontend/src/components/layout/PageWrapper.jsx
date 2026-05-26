@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
+import ProfileCompletionModal from '../../features/auth/components/ProfileCompletionModal'
 
 /**
  * PageWrapper — SILM Command Center Layout Shell
@@ -15,6 +16,9 @@ const PageWrapper = ({ children }) => {
     <div className="layout-root" style={{ background: 'var(--bg-base)' }}>
       {/* Atmospheric scan line */}
       <div className="scan-line" />
+
+      {/* Global Modals */}
+      <ProfileCompletionModal />
 
       <Sidebar />
 

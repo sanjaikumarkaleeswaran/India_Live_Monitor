@@ -43,6 +43,11 @@ const authService = {
     const res = await api.put('/users/me', data)
     return res.data
   },
+
+  resetPassword: async (token, newPassword) => {
+    const res = await api.post('/auth/reset-password', { token, newPassword })
+    return res.data
+  },
 }
 
 export default authService

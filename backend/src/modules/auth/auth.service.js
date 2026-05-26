@@ -1,6 +1,8 @@
 const authRepository = require('./auth.repository')
 const { generateAccessToken, generateRefreshToken } = require('../../utils/jwt.utils')
 const { AppError } = require('../../middleware/errorHandler')
+const { sendEmail } = require('../../utils/email.utils')
+const crypto = require('crypto')
 
 /**
  * Auth Service — Business logic layer
@@ -18,8 +20,24 @@ const authService = {
       throw new AppError('An account with this email already exists', 409)
     }
 
+    // Generate email verification token
+    const emailVerifyToken = crypto.randomBytes(32).toString('hex')
+
     // Create user (password is hashed in the model pre-save hook)
-    const user = await authRepository.create({ name, email, phone, password })
+    const user = await authRepository.create({ 
+      name, email, phone, password,
+      emailVerifyToken
+    })
+
+    // Send verification email
+    const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerifyToken}`
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your Smart India Live Monitor account',
+      html: `<h2>Welcome to SILM, ${user.name}!</h2>
+             <p>Please click the link below to verify your email address:</p>
+             <a href="${verifyUrl}">Verify Email</a>`
+    })
 
     // Generate tokens
     const tokenPayload = { userId: user._id, role: user.role }
@@ -94,6 +112,63 @@ const authService = {
    */
   logout: async (userId) => {
     await authRepository.updateRefreshToken(userId, null)
+  },
+
+  /**
+   * Verify Email
+   */
+  verifyEmail: async (token) => {
+    if (!token) throw new AppError('Invalid token', 400)
+    
+    const user = await authRepository.findByVerificationToken(token)
+    if (!user) throw new AppError('Invalid or expired verification token', 400)
+
+    user.isEmailVerified = true
+    user.emailVerifyToken = undefined
+    await user.save()
+    
+    return true
+  },
+
+  /**
+   * Forgot Password
+   */
+  forgotPassword: async (email) => {
+    const user = await authRepository.findByEmail(email)
+    if (!user) return // Silently return to prevent email enumeration
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    user.passwordResetToken = resetToken
+    user.passwordResetExpires = Date.now() + 3600000 // 1 hour
+    await user.save()
+
+    // Send email
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
+    await sendEmail({
+      to: user.email,
+      subject: 'SILM Password Reset Request',
+      html: `<h2>Password Reset</h2>
+             <p>Click the link below to reset your password. This link is valid for 1 hour.</p>
+             <a href="${resetUrl}">Reset Password</a>`
+    })
+  },
+
+  /**
+   * Reset Password
+   */
+  resetPassword: async (token, newPassword) => {
+    if (!token) throw new AppError('Invalid token', 400)
+
+    const user = await authRepository.findByResetToken(token)
+    if (!user) throw new AppError('Invalid or expired password reset token', 400)
+
+    user.password = newPassword
+    user.passwordResetToken = undefined
+    user.passwordResetExpires = undefined
+    await user.save()
+
+    return true
   },
 }
 

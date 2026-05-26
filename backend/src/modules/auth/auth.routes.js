@@ -1,5 +1,5 @@
 const express = require('express')
-const { register, login, logout, refreshToken, forgotPassword } = require('./auth.controller')
+const { register, login, logout, refreshToken, forgotPassword, resetPassword, verifyEmail } = require('./auth.controller')
 const { protect } = require('../../middleware/auth.middleware')
 const { authLimiter } = require('../../middleware/rateLimiter')
 
@@ -42,5 +42,19 @@ router.post('/refresh-token', refreshToken)
  * @access  Public
  */
 router.post('/forgot-password', forgotPassword)
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset password using token
+ * @access  Public
+ */
+router.post('/reset-password', resetPassword)
+
+/**
+ * @route   POST /api/v1/auth/verify-email
+ * @desc    Verify email address using token
+ * @access  Public
+ */
+router.post('/verify-email', verifyEmail)
 
 module.exports = router

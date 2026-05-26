@@ -57,6 +57,23 @@ const authRepository = {
   emailExists: async (email) => {
     return User.exists({ email: email.toLowerCase() })
   },
+
+  /**
+   * Find user by email verification token
+   */
+  findByVerificationToken: async (token) => {
+    return User.findOne({ emailVerifyToken: token }).select('+emailVerifyToken')
+  },
+
+  /**
+   * Find user by password reset token
+   */
+  findByResetToken: async (token) => {
+    return User.findOne({ 
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() } 
+    }).select('+passwordResetToken +passwordResetExpires')
+  },
 }
 
 module.exports = authRepository

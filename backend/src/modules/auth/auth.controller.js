@@ -75,12 +75,50 @@ const refreshToken = asyncWrapper(async (req, res) => {
 
 /**
  * POST /api/v1/auth/forgot-password
- * (Phase 2 — email functionality)
  */
 const forgotPassword = asyncWrapper(async (req, res) => {
+  const { email } = req.body
+  if (!email) {
+    return ApiResponse.error(res, { message: 'Email is required', statusCode: 400 })
+  }
+
+  await authService.forgotPassword(email)
+
   return ApiResponse.success(res, {
     message: 'If an account with that email exists, a password reset link has been sent.',
   })
 })
 
-module.exports = { register, login, logout, refreshToken, forgotPassword }
+/**
+ * POST /api/v1/auth/reset-password
+ */
+const resetPassword = asyncWrapper(async (req, res) => {
+  const { token, newPassword } = req.body
+  if (!token || !newPassword) {
+    return ApiResponse.error(res, { message: 'Token and new password are required', statusCode: 400 })
+  }
+
+  await authService.resetPassword(token, newPassword)
+
+  return ApiResponse.success(res, {
+    message: 'Password has been reset successfully. You can now login.',
+  })
+})
+
+/**
+ * POST /api/v1/auth/verify-email
+ */
+const verifyEmail = asyncWrapper(async (req, res) => {
+  const { token } = req.body
+  if (!token) {
+    return ApiResponse.error(res, { message: 'Token is required', statusCode: 400 })
+  }
+
+  await authService.verifyEmail(token)
+
+  return ApiResponse.success(res, {
+    message: 'Email verified successfully!',
+  })
+})
+
+module.exports = { register, login, logout, refreshToken, forgotPassword, resetPassword, verifyEmail }

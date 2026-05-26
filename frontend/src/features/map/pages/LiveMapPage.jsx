@@ -1,10 +1,14 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON } from 'react-leaflet'
-import { Siren, Hospital, ShieldAlert, Crosshair, HelpCircle, Layers, ZoomIn, Wind } from 'lucide-react'
+import {
+  Siren, Hospital, ShieldAlert, Crosshair, HelpCircle,
+  Layers, Wind, Activity, AlertTriangle, Radio, Satellite,
+  Navigation, Eye, EyeOff, ChevronRight
+} from 'lucide-react'
 import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
@@ -24,327 +28,440 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-// India coordinates centering
 const INDIA_CENTER = [20.5937, 78.9629]
 const DEFAULT_ZOOM = 5
 
-// Helper to create custom colored divIcon markers
-const createCustomMarker = (color) => {
+const createCustomMarker = (color, size = 14) => {
   return new L.DivIcon({
-    html: `<span style="background-color: ${color}; width: 14px; height: 14px; display: block; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}"></span>`,
+    html: `<span style="
+      background: radial-gradient(circle, ${color}cc, ${color});
+      width: ${size}px; height: ${size}px;
+      display: block; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.8);
+      box-shadow: 0 0 0 3px ${color}40, 0 0 16px ${color}80;
+    "></span>`,
     className: 'custom-leaflet-marker',
-    iconSize: [14, 14],
-    iconAnchor: [7, 7]
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
   })
 }
 
-// Marker categories custom SVGs
 const severityColors = {
   critical: '#ef4444',
-  high:     '#f59e0b',
-  medium:   '#6366f1',
-  low:      '#10b981',
+  high: '#f59e0b',
+  medium: '#6366f1',
+  low: '#10b981',
 }
 
+const FilterBtn = ({ active, color, icon: Icon, label, count, onClick }) => (
+  <motion.button
+    onClick={onClick}
+    whileTap={{ scale: 0.97 }}
+    className="w-full text-left rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
+    style={{
+      padding: '10px 12px',
+      background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${active ? `${color}50` : 'rgba(255,255,255,0.05)'}`,
+      color: active ? color : '#8BAFD4',
+    }}
+  >
+    <span className="flex items-center gap-2.5">
+      {Icon && <Icon size={13} />}
+      {label}
+    </span>
+    <span
+      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+      style={{
+        background: active ? `${color}25` : 'rgba(255,255,255,0.05)',
+        color: active ? color : '#4A6B8A',
+        border: `1px solid ${active ? `${color}40` : 'transparent'}`,
+      }}
+    >
+      {count}
+    </span>
+  </motion.button>
+)
+
+const ToggleBtn = ({ active, color, icon: Icon, label, onClick }) => (
+  <motion.button
+    onClick={onClick}
+    whileTap={{ scale: 0.97 }}
+    className="w-full flex items-center justify-between rounded-xl text-xs font-semibold transition-all"
+    style={{
+      padding: '9px 12px',
+      background: active ? `${color}12` : 'rgba(255,255,255,0.02)',
+      border: `1px solid ${active ? `${color}40` : 'rgba(255,255,255,0.05)'}`,
+      color: active ? color : '#4A6B8A',
+    }}
+  >
+    <span className="flex items-center gap-2">
+      {Icon && <Icon size={12} />}
+      {label}
+    </span>
+    <span
+      className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+      style={{
+        background: active ? `${color}20` : 'rgba(255,255,255,0.04)',
+        color: active ? color : '#2A4B6A',
+        border: `1px solid ${active ? `${color}40` : 'transparent'}`,
+      }}
+    >
+      {active ? 'ON' : 'OFF'}
+    </span>
+  </motion.button>
+)
+
 const LiveMapPage = () => {
-  const [filter, setFilter] = useState('all') // 'all', 'alerts', 'hospitals', 'police'
+  const [filter, setFilter] = useState('all')
   const [showBoundaries, setShowBoundaries] = useState(true)
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [indiaGeoJSON, setIndiaGeoJSON] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const user = useSelector(selectUser)
-  
-  const defaultCenter = user?.location?.coordinates ? [user.location.coordinates[1], user.location.coordinates[0]] : INDIA_CENTER
+
+  const defaultCenter = user?.location?.coordinates
+    ? [user.location.coordinates[1], user.location.coordinates[0]]
+    : INDIA_CENTER
   const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
 
-  // Fetch India state boundaries GeoJSON from CDN
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_telengana.geojson')
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setIndiaGeoJSON(data)
-      })
-      .catch(() => {
-        // Silently fail — map works without boundaries
-      })
+      .then(data => { if (data) setIndiaGeoJSON(data) })
+      .catch(() => {})
   }, [])
 
-  // Fetch live alerts
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
     queryKey: ['mapAlerts'],
     queryFn: () => getAlerts({ limit: 50 }),
   })
 
-  // Fetch live hospitals for the GIS map overlay
   const { data: hospitalsResponse, isLoading: hospitalsLoading } = useQuery({
     queryKey: ['mapHospitals'],
-    queryFn: () => getNearbyHospitals(20.5937, 78.9629, 3000), // National search centering on India
+    queryFn: () => getNearbyHospitals(20.5937, 78.9629, 3000),
   })
 
-  // Fetch live police stations for the GIS map overlay
   const { data: policeResponse, isLoading: policeLoading } = useQuery({
     queryKey: ['mapPolice'],
-    queryFn: () => getNearbyPolice(20.5937, 78.9629, 3000), // National search centering on India
+    queryFn: () => getNearbyPolice(20.5937, 78.9629, 3000),
   })
 
   const alerts = alertsResponse?.data || []
-
-  // Combine fetched resources into safetyCenters array
   const safetyCenters = [
     ...(hospitalsResponse?.hospitals || []).map(h => ({ ...h, type: 'hospital' })),
     ...(policeResponse?.stations || []).map(p => ({ ...p, type: 'police' }))
   ]
 
-  // Filters calculation
   const displayedAlerts = filter === 'all' || filter === 'alerts' ? alerts : []
-  const displayedCenters = filter === 'all'
-    ? safetyCenters
-    : safetyCenters.filter(c => c.type === filter)
+  const displayedCenters = filter === 'all' ? safetyCenters : safetyCenters.filter(c => c.type === filter)
 
-  // AQI heatmap data points [lat, lng, intensity]
   const heatmapPoints = [
-    [28.6139, 77.2090, 0.9],   // Delhi - Very Poor
-    [19.0760, 72.8777, 0.5],   // Mumbai - Moderate
-    [13.0827, 80.2707, 0.3],   // Chennai - Satisfactory
-    [22.5726, 88.3639, 0.6],   // Kolkata - Poor
-    [12.9716, 77.5946, 0.35],  // Bengaluru - Moderate
-    [17.3850, 78.4867, 0.45],  // Hyderabad - Moderate
-    [23.0225, 72.5714, 0.4],   // Ahmedabad
-    [26.9124, 75.7873, 0.55],  // Jaipur
-    [18.5204, 73.8567, 0.45],  // Pune
+    [28.6139, 77.2090, 0.9], [19.0760, 72.8777, 0.5], [13.0827, 80.2707, 0.3],
+    [22.5726, 88.3639, 0.6], [12.9716, 77.5946, 0.35], [17.3850, 78.4867, 0.45],
+    [23.0225, 72.5714, 0.4], [26.9124, 75.7873, 0.55], [18.5204, 73.8567, 0.45],
   ]
 
-  // Recenter to India helper
   const handleRecenter = () => {
-    if (mapInstance) {
-      mapInstance.setView(defaultCenter, defaultZoom)
-    }
+    if (mapInstance) mapInstance.setView(defaultCenter, defaultZoom)
   }
 
   const isLoading = alertsLoading || hospitalsLoading || policeLoading
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🗺️ Live GIS Danger Zone Map</h2>
+      <div className="p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+            <Activity size={16} className="text-cyan-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">Live GIS Intelligence</h2>
+            <p className="text-xs text-slate-500">Loading spatial data…</p>
+          </div>
+        </div>
         <SkeletonCard />
       </div>
     )
   }
 
+  const criticalCount = alerts.filter(a => a.severity === 'critical').length
+  const highCount = alerts.filter(a => a.severity === 'high').length
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Header */}
-      <motion.div className="flex justify-between items-center flex-wrap gap-4"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🗺️ Live GIS Danger Zone Map</h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Real-time geospatial intelligence overlay of crisis zones, hospitals, and police support.
-          </p>
-        </div>
+    <div className="flex flex-col gap-4 h-full">
 
-        {/* Map Actions */}
-        <button
-          onClick={handleRecenter}
-          className="px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 hover:bg-white/5 transition-all"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-        >
-          <Crosshair size={14} />
-          Reset View
-        </button>
-      </motion.div>
-
-      {/* Control Panel Drawer */}
-      <div className="grid grid-cols-1 lg:grid-cols-4" style={{ gap: 24 }}>
-        <div className="lg:col-span-1" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <motion.div className="glass-card p-5" style={{ display: 'flex', flexDirection: 'column', gap: 16 }} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h3 className="font-bold text-base flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-              <Layers size={16} className="text-orange-400" />
-              Layer Controls
-            </h3>
-            
-            {/* Filters */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => setFilter('all')}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: filter === 'all' ? 'rgba(249,115,22,0.1)' : 'transparent',
-                  border: `1px solid ${filter === 'all' ? 'rgba(249,115,22,0.3)' : 'var(--border-subtle)'}`,
-                  color: filter === 'all' ? '#f97316' : 'var(--text-secondary)'
-                }}
-              >
-                <span>🌍 View All Layers</span>
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{alerts.length + safetyCenters.length}</span>
-              </button>
-
-              <button onClick={() => setFilter('alerts')}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: filter === 'alerts' ? 'rgba(239,68,68,0.1)' : 'transparent',
-                  border: `1px solid ${filter === 'alerts' ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
-                  color: filter === 'alerts' ? '#ef4444' : 'var(--text-secondary)'
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <Siren size={12} /> Live Active Alerts
-                </span>
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{alerts.length}</span>
-              </button>
-
-              <button onClick={() => setFilter('hospital')}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: filter === 'hospital' ? 'rgba(59,130,246,0.1)' : 'transparent',
-                  border: `1px solid ${filter === 'hospital' ? 'rgba(59,130,246,0.3)' : 'var(--border-subtle)'}`,
-                  color: filter === 'hospital' ? '#3b82f6' : 'var(--text-secondary)'
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <Hospital size={12} /> Trauma & Medical Centers
-                </span>
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full">
-                  {safetyCenters.filter(c => c.type === 'hospital').length}
-                </span>
-              </button>
-
-              <button onClick={() => setFilter('police')}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: filter === 'police' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                  border: `1px solid ${filter === 'police' ? 'rgba(16,185,129,0.3)' : 'var(--border-subtle)'}`,
-                  color: filter === 'police' ? '#10b981' : 'var(--text-secondary)'
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <ShieldAlert size={12} /> Police Stations
-                </span>
-                <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full">
-                  {safetyCenters.filter(c => c.type === 'police').length}
-                </span>
-              </button>
+      {/* ── Top Stats Bar ─────────────────────────────────────── */}
+      <motion.div
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        {[
+          { label: 'Active Alerts', value: alerts.length, color: '#ef4444', icon: Siren, glow: true },
+          { label: 'Critical Zones', value: criticalCount, color: '#f59e0b', icon: AlertTriangle },
+          { label: 'Medical Centers', value: safetyCenters.filter(c => c.type === 'hospital').length, color: '#3b82f6', icon: Hospital },
+          { label: 'Police Posts', value: safetyCenters.filter(c => c.type === 'police').length, color: '#10b981', icon: ShieldAlert },
+        ].map(({ label, value, color, icon: Icon, glow }) => (
+          <motion.div
+            key={label}
+            whileHover={{ scale: 1.02 }}
+            className="glass-card p-3 flex items-center gap-3 cursor-default"
+            style={{ border: `1px solid ${color}20` }}
+          >
+            <div
+              className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+              style={{
+                background: `${color}15`,
+                border: `1px solid ${color}30`,
+                boxShadow: glow ? `0 0 12px ${color}30` : undefined,
+              }}
+            >
+              <Icon size={16} style={{ color }} />
             </div>
-
-            {/* Overlay Toggles */}
-            <div className="pt-4 border-t border-white/5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-muted">Map Overlays</p>
-              <button
-                onClick={() => setShowBoundaries(b => !b)}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: showBoundaries ? 'rgba(123,97,255,0.1)' : 'transparent',
-                  border: `1px solid ${showBoundaries ? 'rgba(123,97,255,0.3)' : 'var(--border-subtle)'}`,
-                  color: showBoundaries ? '#7b61ff' : 'var(--text-secondary)'
-                }}
-              >
-                <span className="flex items-center gap-2"><Layers size={12} /> State Boundaries</span>
-                <span className="text-[10px]">{showBoundaries ? 'ON' : 'OFF'}</span>
-              </button>
-              <button
-                onClick={() => setShowHeatmap(h => !h)}
-                className="w-full text-left p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
-                style={{
-                  background: showHeatmap ? 'rgba(239,68,68,0.1)' : 'transparent',
-                  border: `1px solid ${showHeatmap ? 'rgba(239,68,68,0.3)' : 'var(--border-subtle)'}`,
-                  color: showHeatmap ? '#ef4444' : 'var(--text-secondary)'
-                }}
-              >
-                <span className="flex items-center gap-2"><Wind size={12} /> AQI Heatmap</span>
-                <span className="text-[10px]">{showHeatmap ? 'ON' : 'OFF'}</span>
-              </button>
-            </div>
-
-            {/* Severity Legend */}
-            <div className="pt-4 border-t border-white/5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-muted">Alert Risk Levels</p>
-              <div className="text-xs text-secondary" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Critical Danger Zone</div>
-                <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> High Alert Sector</div>
-                <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> Medium Warning Region</div>
-                <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Low Watch Sector</div>
-              </div>
+            <div>
+              <p className="text-xs text-slate-500 font-medium">{label}</p>
+              <p className="text-xl font-black text-white leading-none mt-0.5">{value}</p>
             </div>
           </motion.div>
+        ))}
+      </motion.div>
 
-          {/* Quick Notice Panel */}
-          <div className="glass-card p-4 text-xs" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <p className="font-bold text-indigo-400 flex items-center gap-1.5"><HelpCircle size={12} /> Citizen Notice</p>
-            <p className="mt-1" style={{ color: 'var(--text-muted)' }}>
-              Geospatial points display severe weather zones, cyclones, localized road-closures, and closest emergency contacts relative to coordinates.
-            </p>
+      {/* ── Main Layout ────────────────────────────────────────── */}
+      <div className="flex gap-3 flex-1 min-h-0" style={{ height: 'calc(100vh - 280px)', minHeight: 460 }}>
+
+        {/* ── Sidebar ──────────────────────────────────────────── */}
+        <AnimatePresence initial={false}>
+          {!sidebarCollapsed && (
+            <motion.div
+              key="sidebar"
+              initial={{ opacity: 0, x: -20, width: 0 }}
+              animate={{ opacity: 1, x: 0, width: 240 }}
+              exit={{ opacity: 0, x: -20, width: 0 }}
+              transition={{ duration: 0.2 }}
+              className="shrink-0 flex flex-col gap-3 overflow-hidden"
+              style={{ width: 240 }}
+            >
+              {/* Layer Controls Card */}
+              <div className="glass-card p-4 flex flex-col gap-3 flex-1" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+
+                {/* Header */}
+                <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                  <div className="w-7 h-7 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                    <Layers size={13} className="text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-100">Layer Controls</p>
+                    <p className="text-[9px] text-slate-500">Filter map intelligence</p>
+                  </div>
+                </div>
+
+                {/* Data Filters */}
+                <div className="space-y-1.5">
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Data Layers</p>
+                  <FilterBtn
+                    active={filter === 'all'} color="#f97316" icon={null}
+                    label="🌍  View All Layers"
+                    count={alerts.length + safetyCenters.length}
+                    onClick={() => setFilter('all')}
+                  />
+                  <FilterBtn
+                    active={filter === 'alerts'} color="#ef4444" icon={Siren}
+                    label="Live Active Alerts" count={alerts.length}
+                    onClick={() => setFilter('alerts')}
+                  />
+                  <FilterBtn
+                    active={filter === 'hospital'} color="#3b82f6" icon={Hospital}
+                    label="Medical Centers" count={safetyCenters.filter(c => c.type === 'hospital').length}
+                    onClick={() => setFilter('hospital')}
+                  />
+                  <FilterBtn
+                    active={filter === 'police'} color="#10b981" icon={ShieldAlert}
+                    label="Police Stations" count={safetyCenters.filter(c => c.type === 'police').length}
+                    onClick={() => setFilter('police')}
+                  />
+                </div>
+
+                {/* Overlay toggles */}
+                <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Map Overlays</p>
+                  <ToggleBtn active={showBoundaries} color="#00E5FF" icon={Layers} label="State Boundaries" onClick={() => setShowBoundaries(b => !b)} />
+                  <ToggleBtn active={showHeatmap} color="#ef4444" icon={Wind} label="AQI Heatmap" onClick={() => setShowHeatmap(h => !h)} />
+                </div>
+
+                {/* Risk Legend */}
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Alert Risk Levels</p>
+                  <div className="space-y-1.5 px-1">
+                    {[
+                      { color: '#ef4444', label: 'Critical Danger Zone' },
+                      { color: '#f59e0b', label: 'High Alert Sector' },
+                      { color: '#6366f1', label: 'Medium Warning Region' },
+                      { color: '#10b981', label: 'Low Watch Sector' },
+                    ].map(({ color, label }) => (
+                      <div key={label} className="flex items-center gap-2.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ background: color, boxShadow: `0 0 6px ${color}80` }}
+                        />
+                        <span className="text-[10px] text-slate-400">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Spacer + Signal status */}
+                <div className="mt-auto pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-2 px-1">
+                    <Radio size={10} className="text-emerald-400 shrink-0" />
+                    <span className="text-[9px] text-emerald-400 font-semibold uppercase tracking-wider">Feed Active</span>
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <div className="flex items-center gap-2 px-1 mt-1.5">
+                    <Satellite size={10} className="text-slate-500 shrink-0" />
+                    <span className="text-[9px] text-slate-500 font-medium">ISRO SAT-C ● Synced</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Citizen Notice */}
+              <div
+                className="glass-card p-3"
+                style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.15)' }}
+              >
+                <p className="text-[10px] font-bold text-indigo-400 flex items-center gap-1.5 mb-1.5">
+                  <HelpCircle size={11} /> Citizen Notice
+                </p>
+                <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                  Geospatial markers show live crisis zones, medical centres, and nearest emergency support relative to your coordinates.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Map Canvas ────────────────────────────────────────── */}
+        <div className="flex-1 relative rounded-2xl overflow-hidden min-w-0"
+          style={{ border: '1px solid rgba(0,229,255,0.12)', boxShadow: '0 0 40px rgba(0,229,255,0.04)' }}
+        >
+          {/* Map top HUD */}
+          <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">
+            {/* Left: title */}
+            <div className="glass-card px-3 py-1.5 flex items-center gap-2 pointer-events-auto"
+              style={{ background: 'rgba(4,8,15,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,229,255,0.15)' }}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">Live Intelligence Feed</span>
+              <span className="text-[9px] text-slate-500">·</span>
+              <span className="text-[9px] font-semibold text-cyan-400">{alerts.length} active</span>
+            </div>
+
+            {/* Right: actions */}
+            <div className="flex items-center gap-2 pointer-events-auto">
+              <motion.button
+                onClick={() => setSidebarCollapsed(s => !s)}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+                style={{ background: 'rgba(4,8,15,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', color: '#8BAFD4' }}
+              >
+                {sidebarCollapsed ? <Eye size={12} /> : <EyeOff size={12} />}
+                {sidebarCollapsed ? 'Show' : 'Hide'} Panel
+              </motion.button>
+
+              <motion.button
+                onClick={handleRecenter}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+                style={{ background: 'rgba(0,229,255,0.1)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,229,255,0.3)', color: '#00E5FF' }}
+              >
+                <Crosshair size={12} />
+                Recenter
+              </motion.button>
+            </div>
           </div>
-        </div>
 
-        {/* Leaflet Map Canvas */}
-        <div className="lg:col-span-3 h-[60vh] rounded-2xl overflow-hidden relative" style={{ border: '1px solid var(--border-subtle)' }}>
+          {/* Alert count badge bottom-left */}
+          {criticalCount > 0 && (
+            <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{ background: 'rgba(239,68,68,0.15)', backdropFilter: 'blur(12px)', border: '1px solid rgba(239,68,68,0.4)' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-red-400">{criticalCount} Critical Zone{criticalCount > 1 ? 's' : ''} Active</span>
+              </motion.div>
+            </div>
+          )}
+
           <MapContainer
             center={defaultCenter}
             zoom={defaultZoom}
-            style={{ width: '100%', height: '100%', background: '#0e1626' }}
+            style={{ width: '100%', height: '100%', background: '#070d17' }}
             ref={setMapInstance}
+            zoomControl={false}
           >
-            {/* Beautiful CartoDB Dark Matter tiles */}
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             />
 
-            {/* India State Boundaries GeoJSON */}
             {showBoundaries && indiaGeoJSON && (
               <GeoJSON
                 data={indiaGeoJSON}
                 style={{
                   color: '#00E5FF',
-                  weight: 1,
-                  opacity: 0.4,
+                  weight: 1.2,
+                  opacity: 0.5,
                   fillColor: '#00E5FF',
-                  fillOpacity: 0.03,
+                  fillOpacity: 0.04,
+                  dashArray: '3, 6',
                 }}
               />
             )}
 
-            {/* AQI Heatmap — render circles per major city */}
             {showHeatmap && heatmapPoints.map(([lat, lng, intensity], idx) => (
               <Circle
                 key={`heat-${idx}`}
                 center={[lat, lng]}
-                radius={80000}
+                radius={90000}
                 pathOptions={{
                   fillColor: intensity > 0.7 ? '#ef4444' : intensity > 0.5 ? '#f59e0b' : '#10b981',
-                  fillOpacity: intensity * 0.35,
-                  color: 'transparent',
-                  weight: 0,
+                  fillOpacity: intensity * 0.3,
+                  color: intensity > 0.7 ? '#ef4444' : intensity > 0.5 ? '#f59e0b' : '#10b981',
+                  weight: 0.5,
+                  opacity: 0.4,
                 }}
               />
             ))}
 
-            {/* Render Danger circles & labels for active alerts */}
             {displayedAlerts.map((a) => {
-              // Ensure coordinates exist
               if (!a.location?.coordinates || a.location.coordinates.length < 2) return null
               const [lng, lat] = a.location.coordinates
               const color = severityColors[a.severity] || severityColors.medium
-
               return (
                 <div key={a._id}>
-                  {/* Danger circle overlay */}
                   <Circle
                     center={[lat, lng]}
-                    radius={120000} // 120km circle radius
-                    pathOptions={{ fillColor: color, fillOpacity: 0.15, color: color, weight: 1.5 }}
+                    radius={120000}
+                    pathOptions={{ fillColor: color, fillOpacity: 0.12, color, weight: 1, dashArray: '4, 6' }}
                   />
-                  
-                  {/* Core marker node */}
-                  <Marker position={[lat, lng]} icon={createCustomMarker(color)}>
+                  <Marker position={[lat, lng]} icon={createCustomMarker(color, 16)}>
                     <Popup className="leaflet-dark-popup">
-                      <div className="p-1 space-y-1">
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full inline-block"
-                          style={{ color, background: `${color}20`, border: `1px solid ${color}40` }}>
-                          {a.severity}
+                      <div className="p-2 space-y-1.5" style={{ minWidth: 180 }}>
+                        <span
+                          className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block"
+                          style={{ color, background: `${color}20`, border: `1px solid ${color}40` }}
+                        >
+                          {a.severity} alert
                         </span>
-                        <h4 className="text-sm font-bold text-white mt-1">{a.title}</h4>
-                        <p className="text-[11px] text-slate-300">{a.description}</p>
-                        <p className="text-[10px] text-slate-500 pt-1">Target: {a.affectedStates?.join(', ')}</p>
+                        <h4 className="text-sm font-bold text-white">{a.title}</h4>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">{a.description}</p>
+                        {a.affectedStates?.length > 0 && (
+                          <p className="text-[10px] text-slate-500 pt-1 border-t border-white/5">
+                            📍 {a.affectedStates.join(', ')}
+                          </p>
+                        )}
                       </div>
                     </Popup>
                   </Marker>
@@ -352,18 +469,19 @@ const LiveMapPage = () => {
               )
             })}
 
-            {/* Render Safety Trauma / Hospital Checkpoints */}
             {displayedCenters.map((c, idx) => {
               const color = c.type === 'hospital' ? '#3b82f6' : '#10b981'
               return (
-                <Marker key={idx} position={[c.lat, c.lng]} icon={createCustomMarker(color)}>
+                <Marker key={idx} position={[c.lat, c.lng]} icon={createCustomMarker(color, 12)}>
                   <Popup>
-                    <div className="p-1 space-y-1">
+                    <div className="p-2 space-y-1">
                       <span className="text-[9px] uppercase font-bold text-white bg-slate-800 px-1.5 py-0.5 rounded inline-block">
-                        {c.type === 'hospital' ? '🏥 Hospital' : '🛡️ Police HQ'}
+                        {c.type === 'hospital' ? '🏥 Medical Centre' : '🛡️ Police HQ'}
                       </span>
                       <h4 className="text-sm font-bold text-slate-800 mt-1">{c.name}</h4>
-                      <p className="text-xs text-slate-600">Contact: <a href={`tel:${c.phone}`} className="font-bold text-blue-600">{c.phone}</a></p>
+                      <p className="text-xs text-slate-600">
+                        📞 <a href={`tel:${c.phone}`} className="font-bold text-blue-600">{c.phone}</a>
+                      </p>
                     </div>
                   </Popup>
                 </Marker>

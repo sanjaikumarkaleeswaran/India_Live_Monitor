@@ -8,9 +8,8 @@ import {
   PlusCircle, RefreshCw, Trash2, ShieldCheck, UserCheck, AlertTriangle
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getUsers, updateUserRole, getSystemHealth } from '../services/adminService'
+import { getUsers, updateUserRole, getSystemHealth, getUserStats, toggleUserActive, getAdminSOSList, updateAdminSOSStatus } from '../services/adminService'
 import { createAlert } from '../../alerts/services/alertService'
-import { getSOSRequests, updateSOSStatus } from '../../emergency/services/emergencyService'
 import { useSocket } from '../../../hooks/useSocket'
 import { SkeletonCard, SkeletonTable } from '../../../components/ui/Skeleton'
 
@@ -33,12 +32,19 @@ const AdminPage = () => {
     enabled: activeTab === 'users'
   })
 
+  // Fetch user stats
+  const { data: userStatsData } = useQuery({
+    queryKey: ['adminUserStats'],
+    queryFn: getUserStats,
+    enabled: activeTab === 'users'
+  })
+
   // Fetch system health
   const { data: healthData, isLoading: healthLoading } = useQuery({
     queryKey: ['systemHealth'],
     queryFn: getSystemHealth,
     enabled: activeTab === 'health',
-    refetchInterval: 10000 // refetch every 10 seconds
+    refetchInterval: 10000
   })
 
   // Role mutation
@@ -50,6 +56,19 @@ const AdminPage = () => {
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Failed to update role')
+    }
+  })
+
+  // Toggle active mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: toggleUserActive,
+    onSuccess: (data) => {
+      toast.success(`Account ${data.isActive ? 'activated' : 'deactivated'}`)
+      queryClient.invalidateQueries(['adminUsers'])
+      queryClient.invalidateQueries(['adminUserStats'])
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to toggle account')
     }
   })
 
@@ -77,6 +96,10 @@ const AdminPage = () => {
     roleMutation.mutate({ userId, role: newRole })
   }
 
+  const handleToggleActive = (userId) => {
+    toggleActiveMutation.mutate(userId)
+  }
+
   const handleAlertSubmit = (e) => {
     e.preventDefault()
     if (!alertForm.title || !alertForm.description) {
@@ -97,10 +120,10 @@ const AdminPage = () => {
 
   const [sosRequests, setSosRequests] = useState([])
 
-  // Query to fetch active SOS requests
+  // Query to fetch active SOS requests via admin endpoint
   const { data: sosResponse, isLoading: sosLoading } = useQuery({
     queryKey: ['adminSOSList'],
-    queryFn: () => getSOSRequests(),
+    queryFn: () => getAdminSOSList(),
     enabled: activeTab === 'sos'
   })
 
@@ -131,7 +154,7 @@ const AdminPage = () => {
   useSocket(socketEvents)
 
   const sosStatusMutation = useMutation({
-    mutationFn: updateSOSStatus,
+    mutationFn: updateAdminSOSStatus,
     onSuccess: (data) => {
       setSosRequests(prev => prev.map(s => s.id === data.sos.id ? { ...s, ...data.sos } : s))
       toast.success(`SOS marked as ${data.sos.status}`)
@@ -349,6 +372,25 @@ const AdminPage = () => {
               </button>
             </div>
 
+            {/* User stats bar */}
+            {userStatsData?.data && (
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+                {[
+                  { label: 'Total', value: userStatsData.data.total, color: '#8BAFD4' },
+                  { label: 'Admins', value: userStatsData.data.admins, color: '#ef4444' },
+                  { label: 'Mods', value: userStatsData.data.moderators, color: '#f59e0b' },
+                  { label: 'Users', value: userStatsData.data.users, color: '#3b82f6' },
+                  { label: 'Verified', value: userStatsData.data.verified, color: '#10b981' },
+                  { label: 'Active', value: userStatsData.data.active, color: '#00E5FF' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-lg p-2 text-center" style={{ background: `${color}08`, border: `1px solid ${color}20` }}>
+                    <p className="text-xs font-black" style={{ color }}>{value}</p>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-wider mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {usersLoading ? (
               <SkeletonTable />
             ) : (
@@ -358,31 +400,56 @@ const AdminPage = () => {
                     <tr className="border-b" style={{ borderColor: 'var(--border-subtle)' }}>
                       <th className="py-3 font-semibold text-slate-400">Name</th>
                       <th className="py-3 font-semibold text-slate-400">Email</th>
-                      <th className="py-3 font-semibold text-slate-400">Phone</th>
+                      <th className="py-3 font-semibold text-slate-400">Status</th>
                       <th className="py-3 font-semibold text-slate-400">Role</th>
-                      <th className="py-3 font-semibold text-slate-400 text-right">Action</th>
+                      <th className="py-3 font-semibold text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {usersResponse?.data?.map((user) => (
                       <tr key={user._id} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'rgba(255,255,255,0.03)' }}>
                         <td className="py-3 font-medium text-white">{user.name}</td>
-                        <td className="py-3 text-slate-300">{user.email}</td>
-                        <td className="py-3 text-slate-300">{user.phone}</td>
+                        <td className="py-3 text-slate-300 text-xs">{user.email}</td>
+                        <td className="py-3">
+                          <span
+                            className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
+                            style={{
+                              background: user.isActive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                              color: user.isActive ? '#10b981' : '#ef4444',
+                              border: `1px solid ${user.isActive ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                            }}
+                          >
+                            {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
                         <td className="py-3 font-bold uppercase text-xs" style={{ color: user.role === 'admin' ? '#ef4444' : user.role === 'moderator' ? '#f59e0b' : '#3b82f6' }}>
                           {user.role}
                         </td>
                         <td className="py-3 text-right">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                            className="p-1 rounded bg-slate-900 border text-xs"
-                            style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-primary)' }}
-                          >
-                            <option value="user">User</option>
-                            <option value="moderator">Moderator</option>
-                            <option value="admin">Admin</option>
-                          </select>
+                          <div className="flex items-center justify-end gap-2">
+                            <select
+                              value={user.role}
+                              onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                              className="p-1 rounded bg-slate-900 border text-xs"
+                              style={{ borderColor: 'var(--border-subtle)', color: 'var(--text-primary)' }}
+                            >
+                              <option value="user">User</option>
+                              <option value="moderator">Moderator</option>
+                              {/* Admin option only shown if user is already admin — single-admin rule */}
+                              {user.role === 'admin' && <option value="admin">Admin</option>}
+                            </select>
+                            <button
+                              onClick={() => handleToggleActive(user._id)}
+                              className="px-2 py-1 rounded text-[10px] font-bold transition-all"
+                              style={{
+                                background: user.isActive ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+                                color: user.isActive ? '#ef4444' : '#10b981',
+                                border: `1px solid ${user.isActive ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                              }}
+                            >
+                              {user.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

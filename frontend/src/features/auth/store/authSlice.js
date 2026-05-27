@@ -47,6 +47,23 @@ export const fetchCurrentUser = createAsyncThunk(
   },
 )
 
+// ── Cookie helpers (needed for Next.js Edge Middleware) ────
+// Middleware runs server-side and cannot access localStorage.
+// We mirror the token into a JS-accessible cookie so middleware can read it.
+const COOKIE_NAME = 'silm_token'
+const COOKIE_MAX_AGE = 15 * 60 // 15 minutes — matches JWT_ACCESS_EXPIRE
+
+const setTokenCookie = (token) => {
+  if (typeof document === 'undefined') return
+  // SameSite=Strict prevents CSRF; not HttpOnly so JS can read/delete it
+  document.cookie = `${COOKIE_NAME}=${token}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict`
+}
+
+const clearTokenCookie = () => {
+  if (typeof document === 'undefined') return
+  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Strict`
+}
+
 // ── Initial State ──────────────────────────────────────────
 const getLocalStorageToken = () => {
   if (typeof window !== 'undefined') {
@@ -76,12 +93,16 @@ const authSlice = createSlice({
       state.error = null
       if (typeof window !== 'undefined') {
         localStorage.removeItem('silm_token')
+        clearTokenCookie()
+        // Also clear admin PIN session on logout
+        sessionStorage.removeItem('silm_admin_pin_verified')
       }
     },
     setTokens: (state, action) => {
       state.accessToken = action.payload.accessToken
       if (typeof window !== 'undefined') {
         localStorage.setItem('silm_token', action.payload.accessToken)
+        setTokenCookie(action.payload.accessToken)
       }
     },
     clearError: (state) => {
@@ -108,6 +129,7 @@ const authSlice = createSlice({
         state.isAuthenticated = true
         if (action.payload.data?.accessToken && typeof window !== 'undefined') {
           localStorage.setItem('silm_token', action.payload.data.accessToken)
+          setTokenCookie(action.payload.data.accessToken)
         }
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -128,6 +150,7 @@ const authSlice = createSlice({
         state.isAuthenticated = true
         if (action.payload.data?.accessToken && typeof window !== 'undefined') {
           localStorage.setItem('silm_token', action.payload.data.accessToken)
+          setTokenCookie(action.payload.data.accessToken)
         }
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -142,6 +165,8 @@ const authSlice = createSlice({
       state.isAuthenticated = false
       if (typeof window !== 'undefined') {
         localStorage.removeItem('silm_token')
+        clearTokenCookie()
+        sessionStorage.removeItem('silm_admin_pin_verified')
       }
     })
 
@@ -164,6 +189,8 @@ const authSlice = createSlice({
         state.isInitialized = true
         if (typeof window !== 'undefined') {
           localStorage.removeItem('silm_token')
+          clearTokenCookie()
+          sessionStorage.removeItem('silm_admin_pin_verified')
         }
       })
   },

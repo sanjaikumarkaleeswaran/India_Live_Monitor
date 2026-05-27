@@ -5,18 +5,19 @@ const mongoSanitize = require('express-mongo-sanitize')
 const cookieParser = require('cookie-parser')
 const morgan = require('morgan')
 const { globalErrorHandler } = require('./middleware/errorHandler')
-const { generalLimiter } = require('./middleware/rateLimiter')
-const authRoutes = require('./modules/auth/auth.routes')
-const userRoutes = require('./modules/users/user.routes')
-const fuelRoutes = require('./modules/fuel/fuel.routes')
-const alertRoutes = require('./modules/alerts/alert.routes')
-const emergencyRoutes = require('./modules/emergency/emergency.routes')
-const weatherRoutes = require('./modules/weather/weather.routes')
-const aqiRoutes = require('./modules/aqi/aqi.routes')
-const reportRoutes = require('./modules/reports/reports.routes')
-const safetyRoutes = require('./modules/safety/safety.routes')
+const { generalLimiter, adminLimiter } = require('./middleware/rateLimiter')
+const authRoutes         = require('./modules/auth/auth.routes')
+const userRoutes         = require('./modules/users/user.routes')
+const adminRoutes        = require('./modules/admin/admin.routes')
+const fuelRoutes         = require('./modules/fuel/fuel.routes')
+const alertRoutes        = require('./modules/alerts/alert.routes')
+const emergencyRoutes    = require('./modules/emergency/emergency.routes')
+const weatherRoutes      = require('./modules/weather/weather.routes')
+const aqiRoutes          = require('./modules/aqi/aqi.routes')
+const reportRoutes       = require('./modules/reports/reports.routes')
+const safetyRoutes       = require('./modules/safety/safety.routes')
 const notificationRoutes = require('./modules/notifications/notification.routes')
-const logger = require('./utils/logger')
+const logger             = require('./utils/logger')
 
 const app = express()
 
@@ -55,7 +56,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 
-// Rate limiting: 100 requests per 15 minutes per IP
+// Rate limiting: tighter limit for admin, general for everything else
+app.use('/api/v1/admin', adminLimiter)   // 20 req/15min per IP on admin endpoints
 app.use('/api/', generalLimiter)
 
 // ── Body Parsing ───────────────────────────────────────────
@@ -74,51 +76,29 @@ if (process.env.NODE_ENV !== 'test') {
   }))
 }
 
-const os = require('os')
-const mongoose = require('mongoose')
-
-// ── Health Check ───────────────────────────────────────────
-const healthCheckHandler = (req, res) => {
-  const formatUptime = (seconds) => {
-    const d = Math.floor(seconds / (3600 * 24))
-    const h = Math.floor(seconds % (3600 * 24) / 3600)
-    const m = Math.floor(seconds % 3600 / 60)
-    return `${d}d ${h}h ${m}m`
-  }
-
-  const totalMem = os.totalmem()
-  const freeMem = os.freemem()
-  const usedMem = totalMem - freeMem
-
+// ── Public ping endpoint (no auth) ────────────────────────
+// Only confirms the server is running — no sensitive data
+app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     app: 'Smart India Live Monitor API',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    system: {
-      uptime: formatUptime(os.uptime()),
-      cpu: os.loadavg()[0].toFixed(2) + '%',
-      ram: `${(usedMem / 1e9).toFixed(2)} GB / ${(totalMem / 1e9).toFixed(2)} GB`,
-      db: mongoose.connection.readyState === 1 ? 'Connected (Atlas)' : 'Disconnected',
-      ping: '12ms' // Mocked ping for simplicity
-    }
+    environment: process.env.NODE_ENV || 'development',
   })
-}
-
-app.get('/health', healthCheckHandler)
-app.get('/api/v1/system/health', healthCheckHandler)
+})
 
 // ── API Routes ─────────────────────────────────────────────
-app.use('/api/v1/auth',       authRoutes)
-app.use('/api/v1/users',      userRoutes)
-app.use('/api/v1/fuel',       fuelRoutes)
-app.use('/api/v1/alerts',     alertRoutes)
-app.use('/api/v1/emergency',  emergencyRoutes)
-app.use('/api/v1/weather',    weatherRoutes)
-app.use('/api/v1/aqi',        aqiRoutes)
-app.use('/api/v1/reports',    reportRoutes)
-app.use('/api/v1/safety',     safetyRoutes)
+app.use('/api/v1/auth',          authRoutes)
+app.use('/api/v1/users',         userRoutes)
+app.use('/api/v1/admin',         adminRoutes)        // ← Centralized admin module
+app.use('/api/v1/fuel',          fuelRoutes)
+app.use('/api/v1/alerts',        alertRoutes)
+app.use('/api/v1/emergency',     emergencyRoutes)
+app.use('/api/v1/weather',       weatherRoutes)
+app.use('/api/v1/aqi',           aqiRoutes)
+app.use('/api/v1/reports',       reportRoutes)
+app.use('/api/v1/safety',        safetyRoutes)
 app.use('/api/v1/notifications', notificationRoutes)
 
 // ── 404 Handler ────────────────────────────────────────────

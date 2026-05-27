@@ -101,9 +101,30 @@ UserSchema.index({ createdAt: -1 })                   // Latest users first
 
 // ── Pre-save: Hash password ────────────────────────────────
 UserSchema.pre('save', async function (next) {
-  // Only hash if password was modified
   if (!this.isModified('password')) return next()
   this.password = await bcrypt.hash(this.password, 12)
+  next()
+})
+
+// ── Pre-save: Single-admin enforcement ────────────────────
+// Ensures only ONE admin can ever exist at the DB level.
+// This is a safety net in addition to the API-level guard.
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('role') || this.role !== 'admin') return next()
+
+  const existingAdmin = await this.constructor.findOne({
+    role: 'admin',
+    _id: { $ne: this._id }, // exclude self (handles re-saves of the admin doc)
+  })
+
+  if (existingAdmin) {
+    const err = new Error(
+      `Single-admin rule violated: "${existingAdmin.email}" is already the system admin.`
+    )
+    err.statusCode = 403
+    return next(err)
+  }
+
   next()
 })
 

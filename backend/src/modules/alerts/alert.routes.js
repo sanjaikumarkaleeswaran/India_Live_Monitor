@@ -119,7 +119,8 @@ router.put('/:id', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
  * DELETE /api/v1/alerts/:id
  * Soft delete alert (admin only)
  */
-router.delete('/:id', protect, asyncWrapper(async (req, res) => {
+const { adminOnly } = require('../../middleware/rbac.middleware')
+router.delete('/:id', protect, adminOnly, asyncWrapper(async (req, res) => {
   await Alert.findByIdAndUpdate(req.params.id, { isActive: false })
   return ApiResponse.success(res, { message: 'Alert deactivated' })
 }))

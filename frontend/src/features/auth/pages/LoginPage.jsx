@@ -38,6 +38,7 @@ const LoginPage = () => {
     await login(form)
   }
 
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-base)' }}>
       {/* Background decorative elements */}
@@ -168,6 +169,7 @@ const LoginPage = () => {
             >
               {isLoading ? 'Authenticating...' : 'Initialize Session'} <ArrowRight size={16} />
             </button>
+
           </form>
 
           {/* Register link */}

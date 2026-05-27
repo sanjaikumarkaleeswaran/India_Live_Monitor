@@ -48,4 +48,22 @@ const sosLimiter = rateLimit({
   },
 })
 
-module.exports = { generalLimiter, authLimiter, sosLimiter }
+/**
+ * Admin limiter — 20 req / 15 min per IP in production, relaxed in dev.
+ * Tightly restricts admin endpoint access regardless of auth status.
+ * Effective even if a token is stolen — limits what an attacker can enumerate.
+ */
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 20 : 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    ApiResponse.error(res, {
+      message: 'Too many admin requests from this IP. Try again in 15 minutes.',
+      statusCode: 429,
+    })
+  },
+})
+
+module.exports = { generalLimiter, authLimiter, sosLimiter, adminLimiter }

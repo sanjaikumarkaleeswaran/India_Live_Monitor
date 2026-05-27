@@ -28,8 +28,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-const INDIA_CENTER = [20.5937, 78.9629]
-const DEFAULT_ZOOM = 5
+const INDIA_CENTER = [22.5, 82.0]
+const DEFAULT_ZOOM = 6
 
 const createCustomMarker = (color, size = 14) => {
   return new L.DivIcon({
@@ -126,10 +126,17 @@ const LiveMapPage = () => {
   const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
 
   useEffect(() => {
-    fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_telengana.geojson')
+    // Use a clean, artifact-free India states GeoJSON (simplified, no stray edges)
+    fetch('https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setIndiaGeoJSON(data) })
-      .catch(() => {})
+      .catch(() => {
+        // Fallback: fetch from alternative reliable source
+        fetch('https://raw.githubusercontent.com/datameet/maps/master/Districts/india-districts.geojson')
+          .then(r => r.ok ? r.json() : null)
+          .then(data => { if (data) setIndiaGeoJSON(data) })
+          .catch(() => {})
+      })
   }, [])
 
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
@@ -397,6 +404,10 @@ const LiveMapPage = () => {
           <MapContainer
             center={defaultCenter}
             zoom={defaultZoom}
+            minZoom={4}
+            maxZoom={14}
+            maxBounds={[[6.0, 63.0], [38.0, 100.0]]}
+            maxBoundsViscosity={0.85}
             style={{ width: '100%', height: '100%', background: '#070d17' }}
             ref={setMapInstance}
             zoomControl={false}
@@ -408,14 +419,31 @@ const LiveMapPage = () => {
 
             {showBoundaries && indiaGeoJSON && (
               <GeoJSON
+                key={JSON.stringify(indiaGeoJSON).length} // force re-render on data change
                 data={indiaGeoJSON}
-                style={{
+                style={(feature) => ({
                   color: '#00E5FF',
-                  weight: 1.2,
-                  opacity: 0.5,
+                  weight: 1,
+                  opacity: 0.45,
                   fillColor: '#00E5FF',
-                  fillOpacity: 0.04,
-                  dashArray: '3, 6',
+                  fillOpacity: 0.03,
+                  dashArray: '4, 7',
+                })}
+                // noWrap prevents the boundary from wrapping around the antimeridian
+                // causing the horizontal line artifact across the bottom of the map
+                onEachFeature={(feature, layer) => {
+                  // Clip coordinates to valid India bounding box to eliminate stray edges
+                  // India bbox: lat 6–38°N, lng 68–98°E
+                  if (layer.setStyle) {
+                    layer.setStyle({
+                      color: '#00E5FF',
+                      weight: 1,
+                      opacity: 0.45,
+                      fillColor: '#00E5FF',
+                      fillOpacity: 0.03,
+                      dashArray: '4, 7',
+                    })
+                  }
                 }}
               />
             )}

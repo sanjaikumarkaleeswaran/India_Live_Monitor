@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import authService from '../../../features/auth/services/authService'
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -66,5 +66,18 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// Suspense wrapper required by Next.js 15 for useSearchParams() during static pre-rendering
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full max-w-md p-8 glass-card border flex items-center justify-center" style={{ borderColor: 'var(--border-subtle)' }}>
+        <Loader2 className="w-8 h-8 text-[#00E5FF] animate-spin" />
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

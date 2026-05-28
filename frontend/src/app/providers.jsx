@@ -31,11 +31,12 @@ export default function Providers({ children }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000,       // 5 minutes
-            gcTime: 10 * 60 * 1000,          // 10 minutes
+            staleTime: 2 * 60 * 1000,       // 2 minutes — data considered fresh
+            gcTime: 10 * 60 * 1000,          // 10 minutes cache
             retry: 2,
-            refetchOnWindowFocus: false,
-            refetchInterval: 5 * 60 * 1000,  // Auto-refresh every 5 minutes
+            refetchOnWindowFocus: true,       // Re-fetch when user returns to tab
+            refetchOnReconnect: true,         // Re-fetch when network reconnects
+            refetchInterval: false,           // Per-query overrides handle live data
           },
         },
       })

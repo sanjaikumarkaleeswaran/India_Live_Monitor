@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON } from 'react-leaflet'
 import {
   Siren, Hospital, ShieldAlert, Crosshair, HelpCircle,
   Layers, Wind, Activity, AlertTriangle, Radio, Satellite,
-  Navigation, Eye, EyeOff, ChevronRight
+  Navigation, Eye, EyeOff, ChevronRight, RefreshCw
 } from 'lucide-react'
 import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
@@ -118,7 +118,10 @@ const LiveMapPage = () => {
   const [indiaGeoJSON, setIndiaGeoJSON] = useState(null)
   const [mapInstance, setMapInstance] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const user = useSelector(selectUser)
+  const queryClient = useQueryClient()
 
   const defaultCenter = user?.location?.coordinates
     ? [user.location.coordinates[1], user.location.coordinates[0]]
@@ -126,12 +129,10 @@ const LiveMapPage = () => {
   const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
 
   useEffect(() => {
-    // Use a clean, artifact-free India states GeoJSON (simplified, no stray edges)
     fetch('https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setIndiaGeoJSON(data) })
       .catch(() => {
-        // Fallback: fetch from alternative reliable source
         fetch('https://raw.githubusercontent.com/datameet/maps/master/Districts/india-districts.geojson')
           .then(r => r.ok ? r.json() : null)
           .then(data => { if (data) setIndiaGeoJSON(data) })
@@ -142,17 +143,39 @@ const LiveMapPage = () => {
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
     queryKey: ['mapAlerts'],
     queryFn: () => getAlerts({ limit: 50 }),
+    refetchInterval: 30 * 1000,        // Alerts refresh every 30 seconds
+    refetchIntervalInBackground: true,
+    staleTime: 20 * 1000,              // Consider stale after 20s
   })
 
   const { data: hospitalsResponse, isLoading: hospitalsLoading } = useQuery({
     queryKey: ['mapHospitals'],
     queryFn: () => getNearbyHospitals(20.5937, 78.9629, 3000),
+    refetchInterval: 5 * 60 * 1000,   // Hospitals refresh every 5 minutes
+    staleTime: 4 * 60 * 1000,
   })
 
   const { data: policeResponse, isLoading: policeLoading } = useQuery({
     queryKey: ['mapPolice'],
     queryFn: () => getNearbyPolice(20.5937, 78.9629, 3000),
+    refetchInterval: 5 * 60 * 1000,   // Police refresh every 5 minutes
+    staleTime: 4 * 60 * 1000,
   })
+
+  // Track when data was last refreshed
+  useEffect(() => {
+    if (!alertsLoading) setLastUpdated(new Date())
+  }, [alertsResponse, alertsLoading])
+
+  // Manual refresh all map data
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    await queryClient.invalidateQueries({ queryKey: ['mapAlerts'] })
+    await queryClient.invalidateQueries({ queryKey: ['mapHospitals'] })
+    await queryClient.invalidateQueries({ queryKey: ['mapPolice'] })
+    setLastUpdated(new Date())
+    setTimeout(() => setIsRefreshing(false), 800)
+  }, [queryClient])
 
   const alerts = alertsResponse?.data || []
   const safetyCenters = [
@@ -162,6 +185,9 @@ const LiveMapPage = () => {
 
   const displayedAlerts = filter === 'all' || filter === 'alerts' ? alerts : []
   const displayedCenters = filter === 'all' ? safetyCenters : safetyCenters.filter(c => c.type === filter)
+
+  // Format last-updated time as HH:MM:SS
+  const formattedTime = lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
   const heatmapPoints = [
     [28.6139, 77.2090, 0.9], [19.0760, 72.8777, 0.5], [13.0827, 80.2707, 0.3],
@@ -376,6 +402,17 @@ const LiveMapPage = () => {
               </motion.button>
 
               <motion.button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+                style={{ background: 'rgba(4,8,15,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', color: isRefreshing ? '#00E5FF' : '#8BAFD4' }}
+              >
+                <RefreshCw size={11} className={isRefreshing ? 'animate-spin' : ''} />
+                {isRefreshing ? 'Syncing…' : formattedTime}
+              </motion.button>
+
+              <motion.button
                 onClick={handleRecenter}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
@@ -464,8 +501,15 @@ const LiveMapPage = () => {
             ))}
 
             {displayedAlerts.map((a) => {
-              if (!a.location?.coordinates || a.location.coordinates.length < 2) return null
-              const [lng, lat] = a.location.coordinates
+              // Support both GeoJSON { coordinates: [lng, lat] } and flat { lat, lng }
+              let lat, lng
+              if (a.location?.coordinates?.length >= 2) {
+                ;[lng, lat] = a.location.coordinates
+              } else if (a.lat !== undefined && a.lng !== undefined) {
+                lat = a.lat; lng = a.lng
+              } else {
+                return null // skip alerts with no location
+              }
               const color = severityColors[a.severity] || severityColors.medium
               return (
                 <div key={a._id}>

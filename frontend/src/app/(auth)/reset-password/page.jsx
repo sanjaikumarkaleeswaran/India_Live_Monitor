@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Lock, Activity, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import authService from '../../../features/auth/services/authService'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -132,3 +132,18 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
+
+// Suspense wrapper required by Next.js 15 for useSearchParams() in static pre-rendering
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="w-8 h-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
+  )
+}
+
+

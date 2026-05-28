@@ -15,6 +15,18 @@ const { asyncWrapper } = require('../../middleware/errorHandler')
 const register = asyncWrapper(async (req, res) => {
   const { name, email, phone, password } = req.body
 
+  // Basic field validation — return 400 before hitting service layer
+  if (!name || !email || !password) {
+    return ApiResponse.error(res, { message: 'Name, email, and password are required', statusCode: 400 })
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return ApiResponse.error(res, { message: 'Invalid email format', statusCode: 400 })
+  }
+  if (password.length < 8) {
+    return ApiResponse.error(res, { message: 'Password must be at least 8 characters', statusCode: 400 })
+  }
+
   const { user, accessToken, refreshToken } = await authService.register({
     name, email, phone, password,
   })
@@ -33,6 +45,11 @@ const register = asyncWrapper(async (req, res) => {
  */
 const login = asyncWrapper(async (req, res) => {
   const { email, password } = req.body
+
+  // Validate required fields
+  if (!email || !password) {
+    return ApiResponse.error(res, { message: 'Email and password are required', statusCode: 400 })
+  }
 
   const { user, accessToken, refreshToken } = await authService.login({ email, password })
 

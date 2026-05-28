@@ -24,17 +24,22 @@ const FuelPage = () => {
   const [selectedState1, setSelectedState1] = useState('DL') 
   const [selectedState2, setSelectedState2] = useState('MH') // Default: Maharashtra
 
-  // Fetch live fuel prices from backend
+  // Fetch live fuel prices from backend — refresh every 10 minutes
   const { data, isLoading, error } = useQuery({
     queryKey: ['fuelPrices'],
     queryFn: getFuelPrices,
+    refetchInterval: 10 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 8 * 60 * 1000,
   })
 
-  // Fetch fuel history for selected state
+  // Fetch fuel history for selected state — refresh every 10 minutes
   const { data: historyData } = useQuery({
     queryKey: ['fuelHistory', selectedState1],
     queryFn: () => getFuelHistory(selectedState1),
     enabled: !!selectedState1,
+    refetchInterval: 10 * 60 * 1000,
+    staleTime: 8 * 60 * 1000,
   })
 
   // Initialize selectedState1 based on user's state name

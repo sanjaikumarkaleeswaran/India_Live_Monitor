@@ -41,18 +41,24 @@ const WeatherPage = () => {
     ? [userCity, ...DEFAULT_CITIES] 
     : DEFAULT_CITIES
 
-  // Fetch weather data for selected city
-  const { data: weather, isLoading, error } = useQuery({
+  // Fetch weather data for selected city — refreshes every 10 minutes
+  const { data: weather, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['weather', selectedCity],
     queryFn: () => getWeather(selectedCity),
+    refetchInterval: 10 * 60 * 1000,      // 10 minute auto-refresh
+    refetchIntervalInBackground: true,
+    staleTime: 8 * 60 * 1000,
   })
 
-  // Fetch 7-day forecast
+  // Fetch 7-day forecast — refreshes every 30 minutes
   const { data: forecastData } = useQuery({
     queryKey: ['weatherForecast', selectedCity],
     queryFn: () => getWeatherForecast(selectedCity),
-    staleTime: 1000 * 60 * 30, // 30 min
+    staleTime: 1000 * 60 * 25,
+    refetchInterval: 30 * 60 * 1000,
   })
+
+  const lastFetchedAt = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'
 
   if (isLoading) {
     return (
@@ -148,7 +154,10 @@ const WeatherPage = () => {
           <div>
             <div className="flex justify-between items-center">
               <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Current Weather</span>
-              <span className="text-[10px] font-semibold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Live</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-slate-500">Updated {lastFetchedAt}</span>
+                <span className="text-[10px] font-semibold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Live</span>
+              </div>
             </div>
             <h3 className="text-2xl font-bold mt-3 text-slate-100">{weather.city}</h3>
             <p className="text-sm text-slate-400">{weather.condition}</p>

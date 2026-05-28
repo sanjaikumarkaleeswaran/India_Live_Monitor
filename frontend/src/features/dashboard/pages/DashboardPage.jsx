@@ -86,19 +86,44 @@ const AlertRow = ({ alert }) => {
 const DashboardPage = () => {
   const user = useSelector(selectUser)
 
-  const { data: fuelData, isLoading: fuelLoading } = useQuery({ queryKey: ['fuelPrices'], queryFn: getFuelPrices })
-  const { data: alertsResponse, isLoading: alertsLoading } = useQuery({ queryKey: ['alerts'], queryFn: () => getAlerts({ limit: 4 }) })
-  const { data: contactsData, isLoading: contactsLoading } = useQuery({ queryKey: ['emergencyContacts'], queryFn: () => getEmergencyContacts() })
+  const { data: fuelData, isLoading: fuelLoading } = useQuery({
+    queryKey: ['fuelPrices'],
+    queryFn: getFuelPrices,
+    refetchInterval: 10 * 60 * 1000,    // Fuel prices every 10 minutes
+    staleTime: 8 * 60 * 1000,
+  })
+  const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => getAlerts({ limit: 4 }),
+    refetchInterval: 30 * 1000,          // Alerts every 30 seconds
+    refetchIntervalInBackground: true,
+    staleTime: 20 * 1000,
+  })
+  const { data: contactsData, isLoading: contactsLoading } = useQuery({
+    queryKey: ['emergencyContacts'],
+    queryFn: () => getEmergencyContacts(),
+    staleTime: 60 * 60 * 1000,          // Emergency contacts stale after 1 hour
+  })
   
   const defaultCity = user?.city || 'Delhi'
-  const { data: weatherData, isLoading: weatherLoading } = useQuery({ queryKey: ['weather', defaultCity], queryFn: () => getWeather(defaultCity) })
+  const { data: weatherData, isLoading: weatherLoading } = useQuery({
+    queryKey: ['weather', defaultCity],
+    queryFn: () => getWeather(defaultCity),
+    refetchInterval: 10 * 60 * 1000,    // Weather every 10 minutes
+    staleTime: 8 * 60 * 1000,
+  })
   
   const fetchDashboardAqi = async () => {
     const cities = ['Delhi', 'Mumbai', 'Chennai', 'Kolkata', 'Bengaluru']
     const results = await Promise.all(cities.map(c => getAQI(c)))
     return results
   }
-  const { data: aqiList, isLoading: aqiLoading } = useQuery({ queryKey: ['dashboardAqi'], queryFn: fetchDashboardAqi })
+  const { data: aqiList, isLoading: aqiLoading } = useQuery({
+    queryKey: ['dashboardAqi'],
+    queryFn: fetchDashboardAqi,
+    refetchInterval: 15 * 60 * 1000,   // AQI every 15 minutes
+    staleTime: 12 * 60 * 1000,
+  })
 
   const alerts = alertsResponse?.data || []
   const fuelList = fuelData?.prices?.slice(0, 5) || []

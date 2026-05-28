@@ -374,10 +374,12 @@ const LiveMapPage = () => {
         </AnimatePresence>
 
         {/* ── Map Canvas ────────────────────────────────────────── */}
-        <div className="flex-1 relative rounded-2xl overflow-hidden min-w-0"
-          style={{ border: '1px solid rgba(0,229,255,0.12)', boxShadow: '0 0 40px rgba(0,229,255,0.04)' }}
+        <div className="flex-1 relative rounded-2xl overflow-hidden min-w-0" id="map-canvas-outer"
+          style={{
+            border: '1px solid rgba(0,229,255,0.12)',
+            boxShadow: '0 0 40px rgba(0,229,255,0.04)',
+          }}
         >
-          {/* Map top HUD */}
           <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">
             {/* Left: title */}
             <div className="glass-card px-3 py-1.5 flex items-center gap-2 pointer-events-auto"

@@ -4,66 +4,67 @@ const { protect } = require('../../middleware/auth.middleware')
 const { moderatorOrAdmin } = require('../../middleware/rbac.middleware')
 const ApiResponse = require('../../utils/apiResponse')
 const Alert = require('../../models/Alert.model')
+const { fetchLiveGDACSAlerts } = require('./gdacs.service')
 
 const router = express.Router()
 
 // Seed alerts (realistic India-specific alerts)
 const MOCK_ALERTS = [
   {
-    title: 'Cyclone Mocha Warning — Bay of Bengal',
-    description: 'A very severe cyclonic storm is likely to make landfall near Andhra Pradesh coast. High waves and strong winds expected. Coastal populations advised to evacuate.',
+    title: '[SIMULATION] Coastal Storm Warning',
+    description: '(Mock Data) A simulated severe cyclonic storm for testing purposes. No actual threat exists. Simulated waves and strong winds in test environment.',
     type: 'Cyclone Warning', severity: 'critical', category: 'weather',
     affectedStates: ['Andhra Pradesh', 'Odisha', 'West Bengal'],
     location: { type: 'Point', coordinates: [83.2185, 15.9129] }, // AP coast
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Heatwave Alert — Rajasthan & Haryana',
-    description: 'Maximum temperatures expected to remain 46–48°C for the next 3 days. Avoid outdoor exposure between 11am–4pm. Stay hydrated.',
+    title: '[SIMULATION] Regional Heatwave Alert',
+    description: '(Mock Data) Simulated maximum temperatures of 46–48°C for testing the heatwave alert system. This is not a real weather forecast.',
     type: 'Heatwave Alert', severity: 'high', category: 'weather',
     affectedStates: ['Rajasthan', 'Haryana', 'Uttar Pradesh'],
     location: { type: 'Point', coordinates: [75.7873, 26.9124] }, // Jaipur
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Flood Warning — Brahmaputra River Basin',
-    description: 'River water level is above danger mark at multiple gauging stations. Low-lying areas advised to move to higher ground. NDRF teams deployed.',
+    title: '[SIMULATION] River Basin Flood Warning',
+    description: '(Mock Data) Simulated water level crossing danger marks for system testing. No actual flooding is occurring in these regions.',
     type: 'Flood Warning', severity: 'high', category: 'disaster',
     affectedStates: ['Assam', 'Arunachal Pradesh'],
     location: { type: 'Point', coordinates: [93.6053, 26.1445] }, // Guwahati
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Air Quality Hazardous — Delhi NCR',
-    description: 'AQI has crossed 400 in multiple Delhi monitoring stations. Outdoor activities strongly discouraged. Schools may be advised to close.',
+    title: '[SIMULATION] Air Quality Alert',
+    description: '(Mock Data) Simulated hazardous AQI values generated for testing dashboard responses. Not based on real-time sensors.',
     type: 'Air Quality Alert', severity: 'medium', category: 'health',
     affectedStates: ['Delhi', 'Haryana', 'Uttar Pradesh'],
     location: { type: 'Point', coordinates: [77.2090, 28.6139] }, // Delhi
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Heavy Rainfall Alert — Mumbai Suburban',
-    description: 'IMD issues red alert for Mumbai Metropolitan Region. Expected rainfall: 150mm in 24 hours. Low-lying areas prone to waterlogging.',
+    title: '[SIMULATION] Heavy Rainfall Alert',
+    description: '(Mock Data) Simulated heavy rainfall alert (150mm/24h) for testing weather warning systems. This is a simulated event.',
     type: 'Rainfall Alert', severity: 'high', category: 'weather',
     affectedStates: ['Maharashtra'],
     location: { type: 'Point', coordinates: [72.8777, 19.0760] }, // Mumbai
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Landslide Risk — Western Ghats',
-    description: 'Continuous heavy rainfall has saturated soil in Kerala and Karnataka hill districts. Avoid travel through ghat sections. Stay on designated roads only.',
+    title: '[SIMULATION] Landslide Risk',
+    description: '(Mock Data) Simulated landslide risk due to artificial heavy rainfall parameters. For platform testing only.',
     type: 'Landslide Warning', severity: 'medium', category: 'disaster',
     affectedStates: ['Kerala', 'Karnataka'],
     location: { type: 'Point', coordinates: [76.5200, 10.8505] }, // Western Ghats
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
   {
-    title: 'Dense Fog Alert — North India Highways',
-    description: 'Visibility below 50m on NH-44, NH-48 in Punjab, Haryana, UP. Slow down and use fog lights. Highway patrol on alert.',
+    title: '[SIMULATION] Dense Fog Alert',
+    description: '(Mock Data) Simulated low visibility conditions for traffic warning systems test. Conditions are normal.',
     type: 'Fog Warning', severity: 'low', category: 'traffic',
     affectedStates: ['Punjab', 'Haryana', 'Uttar Pradesh'],
     location: { type: 'Point', coordinates: [76.7794, 30.7333] }, // Chandigarh
-    source: 'official', isActive: true, isVerified: true,
+    source: 'system', isActive: true, isVerified: true,
   },
 ]
 
@@ -88,14 +89,24 @@ router.get('/', asyncWrapper(async (req, res) => {
     .limit(limit)
     .lean()
 
-  // Fall back to mock alerts if DB is empty
+  // Fall back to live GDACS API if DB is empty
   if (alerts.length === 0) {
-    alerts = MOCK_ALERTS.map((a, i) => ({
-      ...a,
-      _id: `mock_${i}`,
-      createdAt: new Date(Date.now() - i * 3600000),
-      updatedAt: new Date(),
-    }))
+    const liveAlerts = await fetchLiveGDACSAlerts()
+    
+    if (liveAlerts && liveAlerts.length > 0) {
+      alerts = liveAlerts.map((a, i) => ({
+        ...a,
+        _id: `live_${i}`
+      }))
+    } else {
+      // Final fallback to mock alerts if no live feeds are available
+      alerts = MOCK_ALERTS.map((a, i) => ({
+        ...a,
+        _id: `mock_${i}`,
+        createdAt: new Date(Date.now() - i * 3600000),
+        updatedAt: new Date(),
+      }))
+    }
   }
 
   return ApiResponse.paginated(res, {

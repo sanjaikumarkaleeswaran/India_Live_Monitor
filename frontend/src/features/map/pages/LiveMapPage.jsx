@@ -1,56 +1,71 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+import { renderToString } from 'react-dom/server'
 import {
   Siren, Hospital, ShieldAlert, Crosshair, HelpCircle,
-  Layers, Wind, Activity, AlertTriangle, Radio, Satellite,
-  Navigation, Eye, EyeOff, ChevronRight, RefreshCw
+  Layers, Activity, AlertTriangle, Radio, Satellite,
+  Eye, EyeOff, RefreshCw
 } from 'lucide-react'
-import L from 'leaflet'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
 import { useSelector } from 'react-redux'
 import { selectUser } from '../../auth/store/authSlice'
 
-// Fix Leaflet marker icon asset paths in Vite
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-})
-
 const INDIA_CENTER = [22.5, 82.0]
-const DEFAULT_ZOOM = 6
-
-const createCustomMarker = (color, size = 14) => {
-  return new L.DivIcon({
-    html: `<span style="
-      background: radial-gradient(circle, ${color}cc, ${color});
-      width: ${size}px; height: ${size}px;
-      display: block; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.8);
-      box-shadow: 0 0 0 3px ${color}40, 0 0 16px ${color}80;
-    "></span>`,
-    className: 'custom-leaflet-marker',
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2]
-  })
-}
+const DEFAULT_ZOOM = 5
 
 const severityColors = {
   critical: '#ef4444',
   high: '#f59e0b',
   medium: '#6366f1',
   low: '#10b981',
+}
+
+// Custom Leaflet Icons
+const getAlertIcon = (color) => L.divIcon({
+  className: 'custom-alert-marker',
+  html: `
+    <div style="width: 48px; height: 48px; position: relative; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; inset: 0; border-radius: 50%; background-color: ${color}; opacity: 0.4; animation: pulse-ring 2s infinite;"></div>
+      <div style="position: relative; border-radius: 50%; width: 14px; height: 14px; background-color: ${color}; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 0 16px ${color}80, 0 0 0 4px ${color}30;"></div>
+    </div>
+  `,
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  popupAnchor: [0, -24]
+})
+
+const getCenterIcon = (type, color) => {
+  const iconHtml = renderToString(
+    type === 'hospital' ? <Hospital size={12} color="#fff" /> : <ShieldAlert size={12} color="#fff" />
+  )
+  return L.divIcon({
+    className: 'custom-center-marker',
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 24px; height: 24px; background-color: ${color}; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 4px 12px ${color}60;">
+        ${iconHtml}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24]
+  })
+}
+
+// Component to handle map center changes
+const MapController = ({ center, zoom }) => {
+  const map = useMap()
+  useEffect(() => {
+    map.setView(center, zoom, { animate: true })
+  }, [center, zoom, map])
+  return null
 }
 
 const FilterBtn = ({ active, color, icon: Icon, label, count, onClick }) => (
@@ -114,19 +129,23 @@ const ToggleBtn = ({ active, color, icon: Icon, label, onClick }) => (
 const LiveMapPage = () => {
   const [filter, setFilter] = useState('all')
   const [showBoundaries, setShowBoundaries] = useState(true)
-  const [showHeatmap, setShowHeatmap] = useState(false)
   const [indiaGeoJSON, setIndiaGeoJSON] = useState(null)
-  const [mapInstance, setMapInstance] = useState(null)
+  
+  const [mapCenter, setMapCenter] = useState(INDIA_CENTER)
+  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
+  
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
   const user = useSelector(selectUser)
   const queryClient = useQueryClient()
 
-  const defaultCenter = user?.location?.coordinates
-    ? [user.location.coordinates[1], user.location.coordinates[0]]
-    : INDIA_CENTER
-  const defaultZoom = user?.location?.coordinates ? 7 : DEFAULT_ZOOM
+  useEffect(() => {
+    if (user?.location?.coordinates) {
+      setMapCenter([user.location.coordinates[1], user.location.coordinates[0]])
+      setMapZoom(7)
+    }
+  }, [user])
 
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/Subhash9325/GeoJson-Data-of-Indian-States/master/Indian_States')
@@ -143,31 +162,29 @@ const LiveMapPage = () => {
   const { data: alertsResponse, isLoading: alertsLoading } = useQuery({
     queryKey: ['mapAlerts'],
     queryFn: () => getAlerts({ limit: 50 }),
-    refetchInterval: 30 * 1000,        // Alerts refresh every 30 seconds
+    refetchInterval: 30 * 1000,
     refetchIntervalInBackground: true,
-    staleTime: 20 * 1000,              // Consider stale after 20s
+    staleTime: 20 * 1000,
   })
 
   const { data: hospitalsResponse, isLoading: hospitalsLoading } = useQuery({
     queryKey: ['mapHospitals'],
     queryFn: () => getNearbyHospitals(20.5937, 78.9629, 3000),
-    refetchInterval: 5 * 60 * 1000,   // Hospitals refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 4 * 60 * 1000,
   })
 
   const { data: policeResponse, isLoading: policeLoading } = useQuery({
     queryKey: ['mapPolice'],
     queryFn: () => getNearbyPolice(20.5937, 78.9629, 3000),
-    refetchInterval: 5 * 60 * 1000,   // Police refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 4 * 60 * 1000,
   })
 
-  // Track when data was last refreshed
   useEffect(() => {
     if (!alertsLoading) setLastUpdated(new Date())
   }, [alertsResponse, alertsLoading])
 
-  // Manual refresh all map data
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true)
     await queryClient.invalidateQueries({ queryKey: ['mapAlerts'] })
@@ -179,24 +196,23 @@ const LiveMapPage = () => {
 
   const alerts = alertsResponse?.data || []
   const safetyCenters = [
-    ...(hospitalsResponse?.hospitals || []).map(h => ({ ...h, type: 'hospital' })),
-    ...(policeResponse?.stations || []).map(p => ({ ...p, type: 'police' }))
+    ...(hospitalsResponse?.hospitals || []).map(h => ({ ...h, type: 'hospital', id: `h-${Math.random()}` })),
+    ...(policeResponse?.stations || []).map(p => ({ ...p, type: 'police', id: `p-${Math.random()}` }))
   ]
 
   const displayedAlerts = filter === 'all' || filter === 'alerts' ? alerts : []
   const displayedCenters = filter === 'all' ? safetyCenters : safetyCenters.filter(c => c.type === filter)
 
-  // Format last-updated time as HH:MM:SS
   const formattedTime = lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-  const heatmapPoints = [
-    [28.6139, 77.2090, 0.9], [19.0760, 72.8777, 0.5], [13.0827, 80.2707, 0.3],
-    [22.5726, 88.3639, 0.6], [12.9716, 77.5946, 0.35], [17.3850, 78.4867, 0.45],
-    [23.0225, 72.5714, 0.4], [26.9124, 75.7873, 0.55], [18.5204, 73.8567, 0.45],
-  ]
-
   const handleRecenter = () => {
-    if (mapInstance) mapInstance.setView(defaultCenter, defaultZoom)
+    if (user?.location?.coordinates) {
+      setMapCenter([user.location.coordinates[1], user.location.coordinates[0]])
+      setMapZoom(7)
+    } else {
+      setMapCenter(INDIA_CENTER)
+      setMapZoom(DEFAULT_ZOOM)
+    }
   }
 
   const isLoading = alertsLoading || hospitalsLoading || policeLoading
@@ -219,7 +235,6 @@ const LiveMapPage = () => {
   }
 
   const criticalCount = alerts.filter(a => a.severity === 'critical').length
-  const highCount = alerts.filter(a => a.severity === 'high').length
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -275,10 +290,7 @@ const LiveMapPage = () => {
               className="shrink-0 flex flex-col gap-3 overflow-hidden"
               style={{ width: 240 }}
             >
-              {/* Layer Controls Card */}
               <div className="glass-card p-4 flex flex-col gap-3 flex-1" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
-
-                {/* Header */}
                 <div className="flex items-center gap-2 pb-2 border-b border-white/5">
                   <div className="w-7 h-7 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
                     <Layers size={13} className="text-orange-400" />
@@ -289,13 +301,11 @@ const LiveMapPage = () => {
                   </div>
                 </div>
 
-                {/* Data Filters */}
                 <div className="space-y-1.5">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Data Layers</p>
                   <FilterBtn
                     active={filter === 'all'} color="#f97316" icon={null}
-                    label="🌍  View All Layers"
-                    count={alerts.length + safetyCenters.length}
+                    label="🌍  View All Layers" count={alerts.length + safetyCenters.length}
                     onClick={() => setFilter('all')}
                   />
                   <FilterBtn
@@ -315,14 +325,11 @@ const LiveMapPage = () => {
                   />
                 </div>
 
-                {/* Overlay toggles */}
                 <div className="space-y-1.5 pt-2 border-t border-white/5">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Map Overlays</p>
                   <ToggleBtn active={showBoundaries} color="#00E5FF" icon={Layers} label="State Boundaries" onClick={() => setShowBoundaries(b => !b)} />
-                  <ToggleBtn active={showHeatmap} color="#ef4444" icon={Wind} label="AQI Heatmap" onClick={() => setShowHeatmap(h => !h)} />
                 </div>
 
-                {/* Risk Legend */}
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Alert Risk Levels</p>
                   <div className="space-y-1.5 px-1">
@@ -343,7 +350,6 @@ const LiveMapPage = () => {
                   </div>
                 </div>
 
-                {/* Spacer + Signal status */}
                 <div className="mt-auto pt-3 border-t border-white/5">
                   <div className="flex items-center gap-2 px-1">
                     <Radio size={10} className="text-emerald-400 shrink-0" />
@@ -357,7 +363,6 @@ const LiveMapPage = () => {
                 </div>
               </div>
 
-              {/* Citizen Notice */}
               <div
                 className="glass-card p-3"
                 style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.15)' }}
@@ -381,7 +386,6 @@ const LiveMapPage = () => {
           }}
         >
           <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">
-            {/* Left: title */}
             <div className="glass-card px-3 py-1.5 flex items-center gap-2 pointer-events-auto"
               style={{ background: 'rgba(4,8,15,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,229,255,0.15)' }}
             >
@@ -391,7 +395,6 @@ const LiveMapPage = () => {
               <span className="text-[9px] font-semibold text-cyan-400">{alerts.length} active</span>
             </div>
 
-            {/* Right: actions */}
             <div className="flex items-center gap-2 pointer-events-auto">
               <motion.button
                 onClick={() => setSidebarCollapsed(s => !s)}
@@ -426,9 +429,8 @@ const LiveMapPage = () => {
             </div>
           </div>
 
-          {/* Alert count badge bottom-left */}
           {criticalCount > 0 && (
-            <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none">
+            <div className="absolute bottom-10 left-4 z-[1000] pointer-events-none">
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full"
@@ -440,126 +442,95 @@ const LiveMapPage = () => {
             </div>
           )}
 
-          <MapContainer
-            center={defaultCenter}
-            zoom={defaultZoom}
-            minZoom={4}
-            maxZoom={14}
-            maxBounds={[[6.0, 63.0], [38.0, 100.0]]}
-            maxBoundsViscosity={0.85}
-            style={{ width: '100%', height: '100%', background: '#070d17' }}
-            ref={setMapInstance}
+          <MapContainer 
+            center={mapCenter} 
+            zoom={mapZoom} 
+            style={{ width: '100%', height: '100%', background: '#04080F' }}
             zoomControl={false}
           >
+            <MapController center={mapCenter} zoom={mapZoom} />
+            
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             />
 
             {showBoundaries && indiaGeoJSON && (
-              <GeoJSON
-                key={JSON.stringify(indiaGeoJSON).length} // force re-render on data change
+              <GeoJSON 
                 data={indiaGeoJSON}
-                style={(feature) => ({
+                style={{
                   color: '#00E5FF',
                   weight: 1,
-                  opacity: 0.45,
+                  opacity: 0.4,
+                  dashArray: '4, 4',
                   fillColor: '#00E5FF',
-                  fillOpacity: 0.03,
-                  dashArray: '4, 7',
-                })}
-                // noWrap prevents the boundary from wrapping around the antimeridian
-                // causing the horizontal line artifact across the bottom of the map
-                onEachFeature={(feature, layer) => {
-                  // Clip coordinates to valid India bounding box to eliminate stray edges
-                  // India bbox: lat 6–38°N, lng 68–98°E
-                  if (layer.setStyle) {
-                    layer.setStyle({
-                      color: '#00E5FF',
-                      weight: 1,
-                      opacity: 0.45,
-                      fillColor: '#00E5FF',
-                      fillOpacity: 0.03,
-                      dashArray: '4, 7',
-                    })
-                  }
+                  fillOpacity: 0.02
                 }}
               />
             )}
 
-            {showHeatmap && heatmapPoints.map(([lat, lng, intensity], idx) => (
-              <Circle
-                key={`heat-${idx}`}
-                center={[lat, lng]}
-                radius={90000}
-                pathOptions={{
-                  fillColor: intensity > 0.7 ? '#ef4444' : intensity > 0.5 ? '#f59e0b' : '#10b981',
-                  fillOpacity: intensity * 0.3,
-                  color: intensity > 0.7 ? '#ef4444' : intensity > 0.5 ? '#f59e0b' : '#10b981',
-                  weight: 0.5,
-                  opacity: 0.4,
-                }}
-              />
-            ))}
-
-            {displayedAlerts.map((a) => {
-              // Support both GeoJSON { coordinates: [lng, lat] } and flat { lat, lng }
-              let lat, lng
+            {displayedAlerts.map(a => {
+              let lat, lng;
               if (a.location?.coordinates?.length >= 2) {
-                ;[lng, lat] = a.location.coordinates
+                [lng, lat] = a.location.coordinates;
               } else if (a.lat !== undefined && a.lng !== undefined) {
-                lat = a.lat; lng = a.lng
-              } else {
-                return null // skip alerts with no location
-              }
-              const color = severityColors[a.severity] || severityColors.medium
+                lat = a.lat; lng = a.lng;
+              } else return null;
+
+              const color = severityColors[a.severity] || severityColors.medium;
+              
               return (
-                <div key={a._id}>
-                  <Circle
-                    center={[lat, lng]}
-                    radius={120000}
-                    pathOptions={{ fillColor: color, fillOpacity: 0.12, color, weight: 1, dashArray: '4, 6' }}
-                  />
-                  <Marker position={[lat, lng]} icon={createCustomMarker(color, 16)}>
-                    <Popup className="leaflet-dark-popup">
-                      <div className="p-2 space-y-1.5" style={{ minWidth: 180 }}>
-                        <span
-                          className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block"
-                          style={{ color, background: `${color}20`, border: `1px solid ${color}40` }}
-                        >
-                          {a.severity} alert
-                        </span>
-                        <h4 className="text-sm font-bold text-white">{a.title}</h4>
-                        <p className="text-[11px] text-slate-300 leading-relaxed">{a.description}</p>
-                        {a.affectedStates?.length > 0 && (
-                          <p className="text-[10px] text-slate-500 pt-1 border-t border-white/5">
-                            📍 {a.affectedStates.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    </Popup>
-                  </Marker>
-                </div>
-              )
+                <Marker
+                  key={`alert-${a._id}`}
+                  position={[lat, lng]}
+                  icon={getAlertIcon(color)}
+                >
+                  <Popup className="custom-leaflet-popup">
+                    <div className="p-1 space-y-1.5" style={{ minWidth: 200 }}>
+                      <span
+                        className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block"
+                        style={{ 
+                          color: color, 
+                          background: `${color}20`, 
+                          border: `1px solid ${color}40` 
+                        }}
+                      >
+                        {a.severity} alert
+                      </span>
+                      <h4>{a.title}</h4>
+                      <p className="max-h-24 overflow-y-auto pr-1">{a.description}</p>
+                      {a.affectedStates?.length > 0 && (
+                        <p className="text-[10px] text-slate-500 pt-1 mt-1 border-t border-slate-700/50">
+                          📍 {a.affectedStates.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </Popup>
+                </Marker>
+              );
             })}
 
             {displayedCenters.map((c, idx) => {
-              const color = c.type === 'hospital' ? '#3b82f6' : '#10b981'
+              const color = c.type === 'hospital' ? '#3b82f6' : '#10b981';
               return (
-                <Marker key={idx} position={[c.lat, c.lng]} icon={createCustomMarker(color, 12)}>
-                  <Popup>
-                    <div className="p-2 space-y-1">
+                <Marker
+                  key={c.id || idx}
+                  position={[c.lat, c.lng]}
+                  icon={getCenterIcon(c.type, color)}
+                >
+                  <Popup className="custom-leaflet-popup">
+                    <div className="p-1 space-y-1.5" style={{ minWidth: 200 }}>
                       <span className="text-[9px] uppercase font-bold text-white bg-slate-800 px-1.5 py-0.5 rounded inline-block">
                         {c.type === 'hospital' ? '🏥 Medical Centre' : '🛡️ Police HQ'}
                       </span>
-                      <h4 className="text-sm font-bold text-slate-800 mt-1">{c.name}</h4>
-                      <p className="text-xs text-slate-600">
-                        📞 <a href={`tel:${c.phone}`} className="font-bold text-blue-600">{c.phone}</a>
+                      <h4 className="mt-1">{c.name}</h4>
+                      <p>
+                        📞 <a href={`tel:${c.phone}`} className="font-bold text-blue-400 hover:text-blue-300">{c.phone}</a>
                       </p>
                     </div>
                   </Popup>
                 </Marker>
-              )
+              );
             })}
           </MapContainer>
         </div>

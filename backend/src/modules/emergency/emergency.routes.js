@@ -6,6 +6,9 @@ const ApiResponse = require('../../utils/apiResponse')
 const SOS = require('../../models/SOS.model')
 const Hospital = require('../../models/Hospital.model')
 const PoliceStation = require('../../models/PoliceStation.model')
+const validate = require('../../middleware/validate.middleware')
+const { submitSOSSchema } = require('./emergency.validation')
+const { updateSOSStatusSchema } = require('../admin/admin.validation')
 
 // Helper function to seed initial emergency centers if DB is empty
 const seedEmergencyData = async () => {
@@ -158,12 +161,8 @@ router.get('/police/nearby', asyncWrapper(async (req, res) => {
  * POST /api/v1/emergency/sos
  * Record an SOS signal with user location
  */
-router.post('/sos', protect, asyncWrapper(async (req, res) => {
+router.post('/sos', protect, validate(submitSOSSchema), asyncWrapper(async (req, res) => {
   const { lat, lng, message } = req.body
-
-  if (!lat || !lng) {
-    return ApiResponse.error(res, { message: 'Latitude and longitude coordinates are required for SOS', statusCode: 400 })
-  }
 
   // Save SOS to MongoDB
   const sos = await SOS.create({
@@ -233,11 +232,8 @@ router.get('/sos', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
  * PUT /api/v1/emergency/sos/:id/status
  * Update SOS dispatch status (moderator/admin only)
  */
-router.put('/sos/:id/status', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
+router.put('/sos/:id/status', protect, moderatorOrAdmin, validate(updateSOSStatusSchema), asyncWrapper(async (req, res) => {
   const { status } = req.body
-  if (!['Pending', 'Dispatched', 'Resolved'].includes(status)) {
-    return ApiResponse.error(res, { message: 'Invalid status', statusCode: 400 })
-  }
 
   const sos = await SOS.findByIdAndUpdate(
     req.params.id,

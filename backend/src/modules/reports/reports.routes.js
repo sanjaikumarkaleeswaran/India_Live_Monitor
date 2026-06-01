@@ -4,6 +4,8 @@ const { moderatorOrAdmin } = require('../../middleware/rbac.middleware')
 const { asyncWrapper } = require('../../middleware/errorHandler')
 const ApiResponse = require('../../utils/apiResponse')
 const Report = require('../../models/Report.model')
+const validate = require('../../middleware/validate.middleware')
+const { createReportSchema, updateReportStatusSchema } = require('./reports.validation')
 
 const router = express.Router()
 
@@ -58,18 +60,11 @@ router.get('/', asyncWrapper(async (req, res) => {
  * POST /api/v1/reports
  * Create a new civic report (authenticated users)
  */
-router.post('/', protect, asyncWrapper(async (req, res) => {
+router.post('/', protect, validate(createReportSchema), asyncWrapper(async (req, res) => {
   const { title, description, desc, category, locationName, location } = req.body
 
   // Handle both 'desc' (from frontend form) and 'description'
   const reportDescription = description || desc
-
-  if (!title || !reportDescription || !category || !locationName) {
-    return ApiResponse.error(res, {
-      message: 'Please provide all required fields: title, desc, category, and locationName',
-      statusCode: 400
-    })
-  }
 
   const coordinates = location?.coordinates || [78.9629, 20.5937]
 
@@ -207,11 +202,8 @@ router.post('/:id/flag', protect, asyncWrapper(async (req, res) => {
  * PUT /api/v1/reports/:id/status
  * Update report status (moderator/admin only)
  */
-router.put('/:id/status', protect, moderatorOrAdmin, asyncWrapper(async (req, res) => {
+router.put('/:id/status', protect, moderatorOrAdmin, validate(updateReportStatusSchema), asyncWrapper(async (req, res) => {
   const { status } = req.body
-  if (!['Active', 'Under Review', 'Resolved'].includes(status)) {
-    return ApiResponse.error(res, { message: 'Invalid status', statusCode: 400 })
-  }
 
   const report = await Report.findByIdAndUpdate(
     req.params.id,

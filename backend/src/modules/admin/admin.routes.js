@@ -8,6 +8,8 @@ const ApiResponse = require('../../utils/apiResponse')
 const User = require('../../models/User.model')
 const Alert = require('../../models/Alert.model')
 const SOS = require('../../models/SOS.model')
+const validate = require('../../middleware/validate.middleware')
+const { adminUpdateUserRoleSchema, updateSOSStatusSchema } = require('./admin.validation')
 
 const router = express.Router()
 
@@ -109,17 +111,10 @@ router.get('/users/stats', adminOnly, asyncWrapper(async (req, res) => {
  *   - Promoting a second user to admin is blocked with 403.
  *   - The current admin cannot demote themselves (no-admin-less system).
  */
-router.put('/users/:id/role', adminOnly, asyncWrapper(async (req, res) => {
+router.put('/users/:id/role', adminOnly, validate(adminUpdateUserRoleSchema), asyncWrapper(async (req, res) => {
   const { role } = req.body
   const targetId = req.params.id
   const requesterId = req.user._id.toString()
-
-  if (!['user', 'moderator', 'admin'].includes(role)) {
-    return ApiResponse.error(res, {
-      message: 'Invalid role. Must be: user | moderator | admin',
-      statusCode: 400,
-    })
-  }
 
   // ── Guard 1: Prevent self-demotion ──────────────────────────────────────────
   // The current admin cannot remove their own admin role — this would leave
@@ -249,16 +244,8 @@ router.get('/sos', moderatorOrAdmin, asyncWrapper(async (req, res) => {
  * PUT /api/v1/admin/sos/:id/status
  * Update SOS status (Pending → Dispatched → Resolved) — moderator/admin
  */
-router.put('/sos/:id/status', moderatorOrAdmin, asyncWrapper(async (req, res) => {
-  const VALID_STATUSES = ['Pending', 'Dispatched', 'Resolved']
+router.put('/sos/:id/status', moderatorOrAdmin, validate(updateSOSStatusSchema), asyncWrapper(async (req, res) => {
   const { status } = req.body
-
-  if (!VALID_STATUSES.includes(status)) {
-    return ApiResponse.error(res, {
-      message: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`,
-      statusCode: 400,
-    })
-  }
 
   const sos = await SOS.findByIdAndUpdate(req.params.id, { status }, { new: true })
   if (!sos) return ApiResponse.error(res, { message: 'SOS request not found', statusCode: 404 })

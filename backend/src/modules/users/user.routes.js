@@ -4,6 +4,8 @@ const { adminOnly } = require('../../middleware/rbac.middleware')
 const { asyncWrapper } = require('../../middleware/errorHandler')
 const ApiResponse = require('../../utils/apiResponse')
 const User = require('../../models/User.model')
+const validate = require('../../middleware/validate.middleware')
+const { updateUserProfileSchema, updateUserRoleSchema } = require('./user.validation')
 
 const router = express.Router()
 
@@ -24,7 +26,7 @@ router.get('/me', asyncWrapper(async (req, res) => {
  * PUT /api/v1/users/me
  * Update current user's profile
  */
-router.put('/me', asyncWrapper(async (req, res) => {
+router.put('/me', validate(updateUserProfileSchema), asyncWrapper(async (req, res) => {
   const { name, phone, state, city, preferences } = req.body
   const user = await User.findByIdAndUpdate(
     req.user._id,
@@ -55,11 +57,8 @@ router.get('/', adminOnly, asyncWrapper(async (req, res) => {
  * PUT /api/v1/users/:id/role
  * Admin: Change a user's role
  */
-router.put('/:id/role', adminOnly, asyncWrapper(async (req, res) => {
+router.put('/:id/role', adminOnly, validate(updateUserRoleSchema), asyncWrapper(async (req, res) => {
   const { role } = req.body
-  if (!['user', 'moderator', 'admin'].includes(role)) {
-    return ApiResponse.error(res, { message: 'Invalid role', statusCode: 400 })
-  }
   const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true })
   if (!user) return ApiResponse.error(res, { message: 'User not found', statusCode: 404 })
   return ApiResponse.success(res, { message: 'Role updated', data: { user } })

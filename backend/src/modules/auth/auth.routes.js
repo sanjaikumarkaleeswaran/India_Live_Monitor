@@ -2,6 +2,14 @@ const express = require('express')
 const { register, login, logout, refreshToken, forgotPassword, resetPassword, verifyEmail } = require('./auth.controller')
 const { protect } = require('../../middleware/auth.middleware')
 const { authLimiter } = require('../../middleware/rateLimiter')
+const validate = require('../../middleware/validate.middleware')
+const {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema
+} = require('./auth.validation')
 
 const router = express.Router()
 
@@ -13,14 +21,14 @@ router.use(authLimiter)
  * @desc    Register a new user
  * @access  Public
  */
-router.post('/register', register)
+router.post('/register', validate(registerSchema), register)
 
 /**
  * @route   POST /api/v1/auth/login
  * @desc    Login and receive JWT tokens
  * @access  Public
  */
-router.post('/login', login)
+router.post('/login', validate(loginSchema), login)
 
 /**
  * @route   POST /api/v1/auth/logout
@@ -41,20 +49,20 @@ router.post('/refresh-token', refreshToken)
  * @desc    Send password reset email
  * @access  Public
  */
-router.post('/forgot-password', forgotPassword)
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword)
 
 /**
  * @route   POST /api/v1/auth/reset-password
  * @desc    Reset password using token
  * @access  Public
  */
-router.post('/reset-password', resetPassword)
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword)
 
 /**
  * @route   POST /api/v1/auth/verify-email
  * @desc    Verify email address using token
  * @access  Public
  */
-router.post('/verify-email', verifyEmail)
+router.post('/verify-email', validate(verifyEmailSchema), verifyEmail)
 
 module.exports = router

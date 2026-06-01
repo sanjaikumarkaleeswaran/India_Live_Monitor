@@ -4,7 +4,10 @@ export const APP_VERSION = '1.0.0'
 export const APP_TAGLINE = "India's Unified Civic Intelligence Platform"
 
 // API
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+const isProd = process.env.NODE_ENV === 'production'
+export const API_BASE_URL = isProd 
+  ? 'https://silm-backend.onrender.com' 
+  : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000')
 
 // User roles
 export const ROLES = {

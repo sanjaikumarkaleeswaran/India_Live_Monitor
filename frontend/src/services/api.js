@@ -1,7 +1,10 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
+const isProd = process.env.NODE_ENV === 'production'
+const API_BASE_URL = isProd 
+  ? 'https://silm-backend.onrender.com' 
+  : (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000')
 
 // Create the main axios instance
 const api = axios.create({

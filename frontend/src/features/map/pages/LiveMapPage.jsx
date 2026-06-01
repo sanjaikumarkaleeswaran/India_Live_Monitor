@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap, Circle } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { renderToString } from 'react-dom/server'
@@ -479,34 +479,50 @@ const LiveMapPage = () => {
 
               const color = severityColors[a.severity] || severityColors.medium;
               
+              // Define zone radius based on severity (in meters)
+              const radiusMap = { critical: 400000, high: 250000, medium: 150000, low: 80000 };
+              const zoneRadius = radiusMap[a.severity] || 150000;
+              
               return (
-                <Marker
-                  key={`alert-${a._id}`}
-                  position={[lat, lng]}
-                  icon={getAlertIcon(color)}
-                >
-                  <Popup className="custom-leaflet-popup">
-                    <div className="p-1 space-y-1.5" style={{ minWidth: 200 }}>
-                      <span
-                        className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block"
-                        style={{ 
-                          color: color, 
-                          background: `${color}20`, 
-                          border: `1px solid ${color}40` 
-                        }}
-                      >
-                        {a.severity} alert
-                      </span>
-                      <h4>{a.title}</h4>
-                      <p className="max-h-24 overflow-y-auto pr-1">{a.description}</p>
-                      {a.affectedStates?.length > 0 && (
-                        <p className="text-[10px] text-slate-500 pt-1 mt-1 border-t border-slate-700/50">
-                          📍 {a.affectedStates.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  </Popup>
-                </Marker>
+                <React.Fragment key={`alert-${a._id}`}>
+                  <Circle
+                    center={[lat, lng]}
+                    radius={zoneRadius}
+                    pathOptions={{ 
+                      color: color, 
+                      fillColor: color, 
+                      fillOpacity: 0.08, 
+                      weight: 1,
+                      dashArray: '4, 6'
+                    }}
+                  />
+                  <Marker
+                    position={[lat, lng]}
+                    icon={getAlertIcon(color)}
+                  >
+                    <Popup className="custom-leaflet-popup">
+                      <div className="p-1 space-y-1.5" style={{ minWidth: 200 }}>
+                        <span
+                          className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block"
+                          style={{ 
+                            color: color, 
+                            background: `${color}20`, 
+                            border: `1px solid ${color}40` 
+                          }}
+                        >
+                          {a.severity} alert
+                        </span>
+                        <h4>{a.title}</h4>
+                        <p className="max-h-24 overflow-y-auto pr-1">{a.description}</p>
+                        {a.affectedStates?.length > 0 && (
+                          <p className="text-[10px] text-slate-500 pt-1 mt-1 border-t border-slate-700/50">
+                            📍 {a.affectedStates.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                </React.Fragment>
               );
             })}
 

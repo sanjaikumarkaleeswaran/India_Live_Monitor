@@ -55,6 +55,12 @@ We have successfully scaffolded, integrated, and verified the complete productio
 * **Leaflet Map Overhauls**: Fixed layout bleeds, optimized auto-panning bounds, and applied deep-dark CSS overrides so popups seamlessly match the UI.
 * **Integration Testing Suite**: Configured a complete Jest & Supertest environment covering Auth, Emergency, and Fuel API routes with fully mocked Mongoose models.
 
+### 10. Security Hardening & Map Zones (Phase 10)
+* **Strict Input Validation**: Implemented comprehensive `Joi` schema-based validation across all public and authenticated endpoints to reject unexpected fields and enforce type constraints.
+* **Intelligent Rate Limiting**: Deployed IP and User-ID based rate limiting with sensible defaults (e.g., dedicated strict limits for auth and SOS endpoints) to prevent brute-force attacks and scraping.
+* **Secure Key Management**: Audited external API integrations (OpenWeather, AQICN, GDACS) to ensure zero client-side exposure of sensitive tokens.
+* **Map Radius Zones**: Enhanced the Leaflet Live Map with dynamic `Circle` layers, visualizing the affected impact radius of emergencies based on alert severity while simultaneously rendering all critical markers.
+
 ---
 
 ## 🛠️ Environment Configuration (`.env.example`)
@@ -132,6 +138,7 @@ graph TD
   P6 --> P7[Phase 7: Production Optimization]
   P7 --> P8[Phase 8: Command Center UI Overhaul]
   P8 --> P9[Phase 9: Real-Time Intelligence & Tests]
+  P9 --> P10[Phase 10: Security Hardening & Map Zones]
 ```
 
-* **Current Status**: **All 9 Phases Completed & Verified (Production Ready)**. 
+* **Current Status**: **All 10 Phases Completed & Verified (Production Ready)**. 

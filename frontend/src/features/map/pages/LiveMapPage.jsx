@@ -276,19 +276,18 @@ const LiveMapPage = () => {
       </motion.div>
 
       {/* ── Main Layout ────────────────────────────────────────── */}
-      <div className="flex gap-3 flex-1 min-h-0" style={{ height: 'calc(100vh - 280px)', minHeight: 460 }}>
+      <div className="flex flex-col md:flex-row gap-3 flex-1 min-h-0 md:h-[calc(100vh-280px)]" style={{ minHeight: 460 }}>
 
         {/* ── Sidebar ──────────────────────────────────────────── */}
         <AnimatePresence initial={false}>
           {!sidebarCollapsed && (
             <motion.div
               key="sidebar"
-              initial={{ opacity: 0, x: -20, width: 0 }}
-              animate={{ opacity: 1, x: 0, width: 240 }}
-              exit={{ opacity: 0, x: -20, width: 0 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
-              className="shrink-0 flex flex-col gap-3 overflow-hidden"
-              style={{ width: 240 }}
+              className="shrink-0 flex flex-col gap-3 overflow-hidden w-full md:w-[240px]"
             >
               <div className="glass-card p-4 flex flex-col gap-3 flex-1" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="flex items-center gap-2 pb-2 border-b border-white/5">
@@ -383,6 +382,7 @@ const LiveMapPage = () => {
           style={{
             border: '1px solid rgba(0,229,255,0.12)',
             boxShadow: '0 0 40px rgba(0,229,255,0.04)',
+            minHeight: 400,
           }}
         >
           <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">

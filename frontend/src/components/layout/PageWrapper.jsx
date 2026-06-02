@@ -27,7 +27,8 @@ const PageWrapper = ({ children }) => {
         <Navbar />
 
         <motion.main
-          style={{ padding: '24px 28px', minHeight: 'calc(100vh - 64px)' }}
+          className="page-content"
+          style={{ minHeight: 'calc(100vh - 64px)' }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}

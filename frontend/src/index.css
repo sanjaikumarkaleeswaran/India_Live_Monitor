@@ -226,6 +226,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .main-content.sidebar-collapsed { margin-left: var(--sidebar-collapsed); }
 
+.page-content {
+  padding: 24px 28px;
+}
 /* ── Navbar ────────────────────────────────────────────────── */
 .navbar {
   position: sticky;
@@ -609,6 +612,7 @@ tr:hover td { background: rgba(0,229,255,0.03); }
   .sidebar.mobile-open { transform: translateX(0); }
   .main-content { margin-left: 0 !important; }
   .navbar { padding: 0 16px; }
+  .page-content { padding: 16px; }
 }
 
 /* ── Hide Netlify Widgets ──────────────────────────────────── */

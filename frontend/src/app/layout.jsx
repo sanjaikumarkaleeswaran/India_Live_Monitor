@@ -6,10 +6,19 @@ export const metadata = {
   title: 'Smart India Live Monitor',
   description: 'Smart India Live Monitor — Real-time fuel prices, weather, AQI, emergency alerts, safety zones, and disaster tracking for Indian citizens.',
   keywords: 'India live monitor, fuel prices India, AQI India, weather alerts, emergency India, safety monitor, disaster tracking India',
+  manifest: '/manifest.json',
   openGraph: {
     title: 'Smart India Live Monitor',
     description: "India's unified real-time civic intelligence platform",
     type: 'website',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Smart India Live Monitor',
+  },
+  formatDetection: {
+    telephone: false,
   },
 }
 

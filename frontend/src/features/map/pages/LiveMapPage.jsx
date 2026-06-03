@@ -141,6 +141,12 @@ const LiveMapPage = () => {
   const queryClient = useQueryClient()
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarCollapsed(true)
+    }
+  }, [])
+
+  useEffect(() => {
     if (user?.location?.coordinates) {
       setMapCenter([user.location.coordinates[1], user.location.coordinates[0]])
       setMapZoom(7)
@@ -385,17 +391,17 @@ const LiveMapPage = () => {
             minHeight: 400,
           }}
         >
-          <div className="absolute top-3 left-3 right-3 z-[1000] flex items-center justify-between pointer-events-none">
-            <div className="glass-card px-3 py-1.5 flex items-center gap-2 pointer-events-auto"
+          <div className="absolute top-3 left-3 right-3 z-[1000] flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-0 pointer-events-none">
+            <div className="glass-card px-3 py-1.5 flex items-center gap-2 pointer-events-auto w-full md:w-auto"
               style={{ background: 'rgba(4,8,15,0.85)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,229,255,0.15)' }}
             >
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">Live Intelligence Feed</span>
+              <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider truncate">Live Intelligence Feed</span>
               <span className="text-[9px] text-slate-500">·</span>
-              <span className="text-[9px] font-semibold text-cyan-400">{alerts.length} active</span>
+              <span className="text-[9px] font-semibold text-cyan-400 whitespace-nowrap">{alerts.length} active</span>
             </div>
 
-            <div className="flex items-center gap-2 pointer-events-auto">
+            <div className="flex items-center gap-2 pointer-events-auto flex-wrap w-full md:w-auto justify-start md:justify-end">
               <motion.button
                 onClick={() => setSidebarCollapsed(s => !s)}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}

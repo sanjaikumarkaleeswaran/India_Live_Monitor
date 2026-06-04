@@ -17,6 +17,7 @@ const aqiRoutes          = require('./modules/aqi/aqi.routes')
 const reportRoutes       = require('./modules/reports/reports.routes')
 const safetyRoutes       = require('./modules/safety/safety.routes')
 const notificationRoutes = require('./modules/notifications/notification.routes')
+const aiRoutes           = require('./modules/ai/ai.routes')
 const logger             = require('./utils/logger')
 
 const app = express()
@@ -100,6 +101,7 @@ app.use('/api/v1/aqi',           aqiRoutes)
 app.use('/api/v1/reports',       reportRoutes)
 app.use('/api/v1/safety',        safetyRoutes)
 app.use('/api/v1/notifications', notificationRoutes)
+app.use('/api/v1/ai',            aiRoutes)
 
 // ── 404 Handler ────────────────────────────────────────────
 app.use((req, res) => {

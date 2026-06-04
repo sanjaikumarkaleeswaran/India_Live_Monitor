@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import ProfileCompletionModal from '../../features/auth/components/ProfileCompletionModal'
+import AiChatWidget from '../ai/AiChatWidget'
 
 /**
  * PageWrapper — SILM Command Center Layout Shell
@@ -19,6 +20,7 @@ const PageWrapper = ({ children }) => {
 
       {/* Global Modals */}
       <ProfileCompletionModal />
+      <AiChatWidget />
 
       <Sidebar />
 

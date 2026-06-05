@@ -2,16 +2,27 @@
 
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
+import { toast } from 'react-hot-toast'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import ProfileCompletionModal from '../../features/auth/components/ProfileCompletionModal'
 import AiChatWidget from '../ai/AiChatWidget'
+import { useSocket } from '../../hooks/useSocket'
 
 /**
  * PageWrapper — SILM Command Center Layout Shell
  */
 const PageWrapper = ({ children }) => {
   const { sidebarCollapsed } = useSelector((s) => s.ui)
+
+  useSocket({
+    'emergency:location_updated': (data) => {
+      toast.error(`🚨 SOS SIGNAL RECEIVED!\nLatitude: ${data.location?.lat.toFixed(4)}\nLongitude: ${data.location?.lng.toFixed(4)}`, {
+        duration: 8000,
+        style: { border: '1px solid #FF3D5A' }
+      })
+    }
+  })
 
   return (
     <div className="layout-root" style={{ background: 'var(--bg-base)' }}>

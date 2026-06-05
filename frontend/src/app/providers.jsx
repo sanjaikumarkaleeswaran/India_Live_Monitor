@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { store } from './store'
 import { fetchCurrentUser, setInitialized } from '../features/auth/store/authSlice'
+import '../lib/i18n' // Initialize i18next
 
 function AuthInitializer({ children }) {
   const dispatch = useDispatch()

@@ -4,11 +4,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Bell, Search, MapPin, Cpu, Radio, Satellite, CheckCircle, AlertTriangle, Info } from 'lucide-react'
+import { Menu, Bell, Search, MapPin, Cpu, Radio, Satellite, CheckCircle, AlertTriangle, Info, Languages } from 'lucide-react'
 import { setSidebarMobileOpen } from '../../app/uiSlice'
 import { selectUser } from '../../features/auth/store/authSlice'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getNotifications, markAsRead, markAllAsRead } from '../../features/notifications/services/notificationService'
+import { useTranslation } from 'react-i18next'
 
 const PAGE_TITLES = {
   '/dashboard':  { title: 'National Dashboard',   sub: 'Live intelligence across all 28 states' },
@@ -30,6 +31,7 @@ const Navbar = () => {
   const pathname = usePathname()
   const user = useSelector(selectUser)
   const queryClient = useQueryClient()
+  const { t, i18n } = useTranslation()
   const [time, setTime] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -207,6 +209,33 @@ const Navbar = () => {
 
       {/* Right: Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+
+        {/* Language Switcher */}
+        <motion.button
+          onClick={() => {
+            const current = i18n.language || 'en';
+            const next = current === 'en' ? 'hi' : current === 'hi' ? 'ta' : 'en';
+            i18n.changeLanguage(next);
+          }}
+          style={{
+            width: 36, height: 36,
+            borderRadius: 10,
+            background: 'rgba(0,229,255,0.05)',
+            border: '1px solid rgba(0,229,255,0.1)',
+            color: '#4A6B8A',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            fontSize: 10,
+            fontWeight: 800,
+            textTransform: 'uppercase'
+          }}
+          whileHover={{ borderColor: 'rgba(0,229,255,0.3)', color: '#00E5FF' }}
+          whileTap={{ scale: 0.92 }}
+          aria-label="Toggle Language"
+        >
+          {i18n.language === 'en' ? 'EN' : i18n.language === 'hi' ? 'HI' : 'TA'}
+        </motion.button>
 
         {/* Search */}
         <motion.button

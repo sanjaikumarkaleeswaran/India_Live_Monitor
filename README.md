@@ -60,6 +60,11 @@ We have successfully scaffolded, integrated, and verified the complete productio
 * **Predictive Engines Pipeline**: Simulated ML predictors for Fuel Trends, 24h AQI Forecasting, and Traffic Congestion.
 * **National Intelligence Models**: Disaster Risk Scoring and Fake News/Misinformation Alert Verification endpoints.
 
+### 13. Gamification & Community Trust (Phase 13)
+* **Civic Karma System**: Users earn a 'Trust Score' for accurately reporting or verifying civic incidents.
+* **National Leaderboard**: A real-time ranking of top citizen responders integrated directly into the dashboard.
+* **Automated Verification**: Incident verification status is dynamically managed through crowd-sourced upvotes and flags.
+
 ---
 
 ## 🛠️ Environment Configuration (`.env.example`)
@@ -136,6 +141,7 @@ graph TD
   P9 --> P10[Phase 10: Security]
   P10 --> P11[Phase 11: PWA & Vitest]
   P11 --> P12[Phase 12: AI Predictions & Chatbot]
+  P12 --> P13[Phase 13: Gamification & Community]
 ```
 
-* **Current Status**: **Phases 1 to 12 Completed & Verified (Production Ready)**. Full AI Integration is live!
+* **Current Status**: **Phases 1 to 13 Completed & Verified (Production Ready)**. Full AI and Gamification Integrations are live!

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Sparkles, Loader2 } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Loader2, Mic, MicOff } from 'lucide-react';
 import { aiAPI } from '../../services/aiAPI';
+import { useTranslation } from 'react-i18next';
 
 const AiChatWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -9,7 +10,10 @@ const AiChatWidget = () => {
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef(null);
+    const recognitionRef = useRef(null);
+    const { i18n } = useTranslation();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -18,6 +22,50 @@ const AiChatWidget = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping]);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = false;
+            recognitionRef.current.interimResults = false;
+
+            recognitionRef.current.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                setInput(prev => (prev ? prev + ' ' : '') + transcript);
+            };
+
+            recognitionRef.current.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsListening(false);
+            };
+        }
+    }, []);
+
+    const toggleListen = (e) => {
+        e.preventDefault();
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        } else {
+            if (recognitionRef.current) {
+                const langMap = { hi: 'hi-IN', ta: 'ta-IN', en: 'en-IN' };
+                recognitionRef.current.lang = langMap[i18n.language] || 'en-IN';
+                try {
+                    recognitionRef.current.start();
+                    setIsListening(true);
+                } catch (err) {
+                    console.error("Microphone start error:", err);
+                }
+            } else {
+                alert("Voice input is not supported in this browser.");
+            }
+        }
+    };
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -113,17 +161,28 @@ const AiChatWidget = () => {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask me anything..."
-                        className="w-full bg-slate-900 border border-slate-600 rounded-full py-2.5 pl-4 pr-12 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                        placeholder={isListening ? "Listening..." : "Ask me anything..."}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-full py-2.5 pl-4 pr-20 text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
                         disabled={isTyping}
                     />
-                    <button 
-                        type="submit"
-                        disabled={!input.trim() || isTyping}
-                        className="absolute right-1 p-1.5 bg-cyan-500 text-slate-900 rounded-full hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-colors"
-                    >
-                        {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    </button>
+                    <div className="absolute right-1 flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={toggleListen}
+                            disabled={isTyping}
+                            className={`p-1.5 rounded-full transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-cyan-400 hover:bg-slate-700'}`}
+                            title="Voice Input"
+                        >
+                            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                        </button>
+                        <button 
+                            type="submit"
+                            disabled={!input.trim() || isTyping}
+                            className="p-1.5 bg-cyan-500 text-slate-900 rounded-full hover:bg-cyan-400 disabled:opacity-50 disabled:hover:bg-cyan-500 transition-colors"
+                        >
+                            {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

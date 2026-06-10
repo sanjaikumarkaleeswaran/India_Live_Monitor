@@ -10,7 +10,7 @@ import { renderToString } from 'react-dom/server'
 import {
   Siren, Hospital, ShieldAlert, Crosshair, HelpCircle,
   Layers, Activity, AlertTriangle, Radio, Satellite,
-  Eye, EyeOff, RefreshCw
+  Eye, EyeOff, RefreshCw, Camera
 } from 'lucide-react'
 import { getAlerts } from '../../alerts/services/alertService'
 import { getEmergencyContacts, getNearbyHospitals, getNearbyPolice } from '../../emergency/services/emergencyService'
@@ -27,6 +27,13 @@ const severityColors = {
   medium: '#6366f1',
   low: '#10b981',
 }
+
+const CCTV_FEEDS = [
+  { id: 'cctv-1', name: 'MG Road Junction, Delhi', lat: 28.6139, lng: 77.2090, type: 'cctv', url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400&h=250' },
+  { id: 'cctv-2', name: 'NH48 Toll Plaza', lat: 28.5024, lng: 77.0868, type: 'cctv', url: 'https://images.unsplash.com/photo-1566418730999-1a6c42a22f30?auto=format&fit=crop&q=80&w=400&h=250' },
+  { id: 'cctv-3', name: 'Marine Drive, Mumbai', lat: 18.9440, lng: 72.8225, type: 'cctv', url: 'https://images.unsplash.com/photo-1570168007204-dfb528c6888f?auto=format&fit=crop&q=80&w=400&h=250' },
+  { id: 'cctv-4', name: 'Anna Salai, Chennai', lat: 13.0604, lng: 80.2496, type: 'cctv', url: 'https://images.unsplash.com/photo-1506526615598-c62cb9842a1d?auto=format&fit=crop&q=80&w=400&h=250' }
+]
 
 // Custom Leaflet Icons
 const getAlertIcon = (color) => L.divIcon({
@@ -50,6 +57,21 @@ const getCenterIcon = (type, color) => {
     className: 'custom-center-marker',
     html: `
       <div style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 24px; height: 24px; background-color: ${color}; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 4px 12px ${color}60;">
+        ${iconHtml}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24]
+  })
+}
+
+const getCCTVIcon = () => {
+  const iconHtml = renderToString(<Camera size={12} color="#000" />)
+  return L.divIcon({
+    className: 'custom-center-marker',
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; border-radius: 50%; width: 24px; height: 24px; background-color: #fbbf24; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 4px 12px rgba(251, 191, 36, 0.6);">
         ${iconHtml}
       </div>
     `,
@@ -208,6 +230,7 @@ const LiveMapPage = () => {
 
   const displayedAlerts = filter === 'all' || filter === 'alerts' ? alerts : []
   const displayedCenters = filter === 'all' ? safetyCenters : safetyCenters.filter(c => c.type === filter)
+  const displayedCCTV = (filter === 'all' || filter === 'cctv') ? CCTV_FEEDS : []
 
   const formattedTime = lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
@@ -255,7 +278,7 @@ const LiveMapPage = () => {
           { label: 'Active Alerts', value: alerts.length, color: '#ef4444', icon: Siren, glow: true },
           { label: 'Critical Zones', value: criticalCount, color: '#f59e0b', icon: AlertTriangle },
           { label: 'Medical Centers', value: safetyCenters.filter(c => c.type === 'hospital').length, color: '#3b82f6', icon: Hospital },
-          { label: 'Police Posts', value: safetyCenters.filter(c => c.type === 'police').length, color: '#10b981', icon: ShieldAlert },
+          { label: 'CCTV Feeds', value: CCTV_FEEDS.length, color: '#fbbf24', icon: Camera },
         ].map(({ label, value, color, icon: Icon, glow }) => (
           <motion.div
             key={label}
@@ -310,7 +333,7 @@ const LiveMapPage = () => {
                   <p className="text-[9px] uppercase font-bold tracking-widest text-slate-600 px-1">Data Layers</p>
                   <FilterBtn
                     active={filter === 'all'} color="#f97316" icon={null}
-                    label="🌍  View All Layers" count={alerts.length + safetyCenters.length}
+                    label="🌍  View All Layers" count={alerts.length + safetyCenters.length + CCTV_FEEDS.length}
                     onClick={() => setFilter('all')}
                   />
                   <FilterBtn
@@ -327,6 +350,11 @@ const LiveMapPage = () => {
                     active={filter === 'police'} color="#10b981" icon={ShieldAlert}
                     label="Police Stations" count={safetyCenters.filter(c => c.type === 'police').length}
                     onClick={() => setFilter('police')}
+                  />
+                  <FilterBtn
+                    active={filter === 'cctv'} color="#fbbf24" icon={Camera}
+                    label="Live Traffic CCTV" count={CCTV_FEEDS.length}
+                    onClick={() => setFilter('cctv')}
                   />
                 </div>
 
@@ -554,6 +582,26 @@ const LiveMapPage = () => {
                 </Marker>
               );
             })}
+
+            {displayedCCTV.map(c => (
+              <Marker key={c.id} position={[c.lat, c.lng]} icon={getCCTVIcon()}>
+                <Popup className="custom-leaflet-popup">
+                  <div className="p-1 space-y-2" style={{ minWidth: 260 }}>
+                    <span className="text-[9px] uppercase font-bold text-slate-900 bg-amber-400 px-1.5 py-0.5 rounded inline-block">
+                      📹 Live Traffic Feed
+                    </span>
+                    <h4 className="mt-1 text-sm font-bold text-white">{c.name}</h4>
+                    <div className="rounded-lg overflow-hidden border border-slate-700 mt-2 relative shadow-lg">
+                      <div className="absolute top-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded text-[8px] text-red-400 font-bold uppercase backdrop-blur-sm z-10">
+                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span> REC
+                      </div>
+                      <img src={c.url} alt="CCTV Feed" className="w-full h-32 object-cover opacity-90" />
+                    </div>
+                    <p className="text-[10px] text-slate-400">Stream encrypted • {new Date().toLocaleTimeString('en-IN')}</p>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
         </div>
       </div>

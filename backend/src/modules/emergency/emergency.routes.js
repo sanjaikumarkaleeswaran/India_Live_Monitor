@@ -205,6 +205,53 @@ router.post('/sos', protect, validate(submitSOSSchema), asyncWrapper(async (req,
 }))
 
 /**
+ * POST /api/v1/emergency/sms-webhook
+ * Receive offline SOS from Twilio SMS/WhatsApp gateway
+ */
+router.post('/sms-webhook', asyncWrapper(async (req, res) => {
+  const { From, Body } = req.body
+  const User = require('../../models/User.model')
+  
+  // Try to find user by phone number
+  let phoneStr = From || ''
+  if (phoneStr.startsWith('+91')) phoneStr = phoneStr.replace('+91', '')
+  
+  const user = await User.findOne({ phone: phoneStr })
+  
+  const sos = await SOS.create({
+    user: user ? user._id : null,
+    name: user ? user.name : 'Unknown Citizen (SMS Fallback)',
+    phone: From || 'Unknown',
+    location: user ? user.location : { type: 'Point', coordinates: [78.9629, 20.5937] },
+    message: Body || 'Offline SMS SOS Triggered via Twilio',
+    status: 'Pending'
+  })
+
+  const sosData = {
+    id: sos._id,
+    name: sos.name,
+    location: user ? `${user.city || 'Unknown'} (${sos.location.coordinates[1]}, ${sos.location.coordinates[0]})` : 'Unknown (via SMS)',
+    phone: sos.phone,
+    status: sos.status,
+    time: 'Just now',
+    createdAt: sos.createdAt
+  }
+
+  // Trigger Socket.io broadcast to administrators
+  if (req.app.get('io')) {
+    req.app.get('io').emit('emergency:sos', sosData)
+  }
+
+  // Twilio requires TwiML XML response
+  res.set('Content-Type', 'text/xml')
+  res.send(`
+    <Response>
+      <Message>SILM: Your SOS has been received. Responders have been notified.</Message>
+    </Response>
+  `)
+}))
+
+/**
  * GET /api/v1/emergency/sos
  * Get all active/pending SOS requests (moderator/admin only)
  */

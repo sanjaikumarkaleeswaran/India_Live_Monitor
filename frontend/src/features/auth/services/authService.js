@@ -48,6 +48,11 @@ const authService = {
     const res = await api.post('/auth/reset-password', { token, newPassword })
     return res.data
   },
+
+  getLeaderboard: async () => {
+    const res = await api.get('/users/leaderboard')
+    return res.data
+  },
 }
 
 export default authService

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter, usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Bell, Search, MapPin, Cpu, Radio, Satellite, CheckCircle, AlertTriangle, Info, Languages } from 'lucide-react'
+import { Menu, Bell, Search, MapPin, Cpu, Radio, Satellite, CheckCircle, AlertTriangle, Info, Languages, Award } from 'lucide-react'
 import { setSidebarMobileOpen } from '../../app/uiSlice'
 import { selectUser } from '../../features/auth/store/authSlice'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -349,6 +349,23 @@ const Navbar = () => {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Civic Trust Score */}
+        {user && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 10px',
+            borderRadius: 10,
+            background: 'rgba(255,215,0,0.1)',
+            border: '1px solid rgba(255,215,0,0.2)',
+            cursor: 'default'
+          }} title="Civic Karma Score">
+            <Award size={14} style={{ color: '#FFD700' }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>
+              {user.trustScore || 0}
+            </span>
+          </div>
+        )}
 
         {/* User Avatar */}
         <motion.button

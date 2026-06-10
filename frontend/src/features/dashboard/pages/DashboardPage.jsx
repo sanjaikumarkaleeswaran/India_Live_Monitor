@@ -11,6 +11,7 @@ import {
 import { selectUser } from '../../auth/store/authSlice'
 import { LiveBadge } from '../../../components/ui/Badge'
 import { SkeletonStatCard, SkeletonCard } from '../../../components/ui/Skeleton'
+import LeaderboardWidget from '../components/LeaderboardWidget'
 import { formatCurrency, getAQILevel, formatTimeAgo } from '../../../utils/formatters'
 import { getFuelPrices } from '../../fuel/services/fuelService'
 import { getAlerts } from '../../alerts/services/alertService'
@@ -233,8 +234,8 @@ const DashboardPage = () => {
         </motion.div>
       </div>
 
-      {/* Fuel + AQI */}
-      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
+      {/* Fuel + AQI + Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 20 }}>
         <motion.div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -296,6 +297,9 @@ const DashboardPage = () => {
             <p style={{ fontSize: 11, color: '#8BAFD4', lineHeight: 1.6 }}>Delhi AQI is Poor. Avoid outdoor activities. Wear N95 mask if going out.</p>
           </div>
         </motion.div>
+
+        {/* Leaderboard */}
+        <LeaderboardWidget />
       </div>
     </div>
   )

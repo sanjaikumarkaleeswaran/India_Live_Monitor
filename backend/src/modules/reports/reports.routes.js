@@ -4,6 +4,7 @@ const { moderatorOrAdmin } = require('../../middleware/rbac.middleware')
 const { asyncWrapper } = require('../../middleware/errorHandler')
 const ApiResponse = require('../../utils/apiResponse')
 const Report = require('../../models/Report.model')
+const User = require('../../models/User.model')
 const validate = require('../../middleware/validate.middleware')
 const { createReportSchema, updateReportStatusSchema } = require('./reports.validation')
 
@@ -82,6 +83,11 @@ router.post('/', protect, validate(createReportSchema), asyncWrapper(async (req,
     status: 'Active'
   })
 
+  // Gamification: Update user's submitted reports and trust score (+10 points)
+  await User.findByIdAndUpdate(req.user._id, {
+    $inc: { reportsSubmitted: 1, trustScore: 10 }
+  })
+
   // Format response to match frontend expectations
   const formattedReport = {
     id: report._id,
@@ -126,8 +132,12 @@ router.post('/:id/verify', protect, asyncWrapper(async (req, res) => {
   const isVerified = report.verifiedUsers.some(id => id.equals(userId))
   if (isVerified) {
     report.verifiedUsers = report.verifiedUsers.filter(id => !id.equals(userId))
+    // Gamification: remove points
+    await User.findByIdAndUpdate(userId, { $inc: { reportsVerified: -1, trustScore: -2 } })
   } else {
     report.verifiedUsers.push(userId)
+    // Gamification: add points
+    await User.findByIdAndUpdate(userId, { $inc: { reportsVerified: 1, trustScore: 2 } })
   }
 
   await report.save()

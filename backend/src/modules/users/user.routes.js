@@ -37,6 +37,21 @@ router.put('/me', validate(updateUserProfileSchema), asyncWrapper(async (req, re
 }))
 
 /**
+ * GET /api/v1/users/leaderboard
+ * Get top users by trust score (Gamification)
+ */
+router.get('/leaderboard', asyncWrapper(async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10
+  const users = await User.find({ trustScore: { $gt: 0 } })
+    .select('name avatar city state trustScore badges reportsSubmitted')
+    .sort({ trustScore: -1 })
+    .limit(limit)
+    .lean()
+
+  return ApiResponse.success(res, { data: { leaderboard: users } })
+}))
+
+/**
  * GET /api/v1/users
  * Admin: List all users
  */

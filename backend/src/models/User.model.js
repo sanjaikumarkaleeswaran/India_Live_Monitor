@@ -41,6 +41,12 @@ const UserSchema = new mongoose.Schema(
     state: { type: String, default: null },  // Preferred state for alerts
     city:  { type: String, default: null },
 
+    // ── Gamification & Trust ───────────────────────────────
+    trustScore: { type: Number, default: 0 },
+    reportsSubmitted: { type: Number, default: 0 },
+    reportsVerified: { type: Number, default: 0 },
+    badges: [{ type: String }],
+
     // ── GIS: User's saved location ─────────────────────────
     location: {
       type: {
@@ -144,6 +150,10 @@ UserSchema.methods.toPublicJSON = function () {
     avatar: this.avatar,
     state: this.state,
     city: this.city,
+    trustScore: this.trustScore,
+    reportsSubmitted: this.reportsSubmitted,
+    reportsVerified: this.reportsVerified,
+    badges: this.badges,
     preferences: this.preferences,
     isEmailVerified: this.isEmailVerified,
     lastLogin: this.lastLogin,
